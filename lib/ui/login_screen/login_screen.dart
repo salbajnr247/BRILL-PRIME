@@ -53,6 +53,29 @@ class _LoginScreenState extends State<LoginScreen> {
     //   5531886652142950
   }
 
+  void _handleSuccessfulLogin(AuthProvider authProvider) {
+    if (authProvider.userProfile?.data.role == consumer.toUpperCase()) {
+      navToWithScreenName(
+        context: context,
+        screen: ConsumerHomePage(
+          currentLocation: authProvider.userCurrentLocation!,
+        ),
+      );
+    } else if (authProvider.userProfile?.data.role == vendor.toUpperCase()) {
+      if (authProvider.userProfile?.data.vendor == null) {
+        navToWithScreenName(
+          context: context,
+          screen: const CompleteVendorScreen(),
+        );
+      } else {
+        navToWithScreenName(
+          context: context,
+          screen: const VendorHomeScreen(),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -243,16 +266,39 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SocialLoginIconWidget(iconName: googleIcon, onTap: () {}),
-                      const SizedBox(
-                        width: 20,
+                      SocialLoginIconWidget(
+                        iconName: googleIcon,
+                        onTap: () async {
+                          final isLoggedIn = await authProvider.signInWithGoogle(context: context);
+                          if (isLoggedIn && context.mounted) {
+                            _handleSuccessfulLogin(authProvider);
+                          }
+                        },
                       ),
-                      SocialLoginIconWidget(iconName: appleLogo, onTap: () {}),
                       const SizedBox(
                         width: 20,
                       ),
                       SocialLoginIconWidget(
-                          iconName: facebookLogo, onTap: () {}),
+                        iconName: appleLogo,
+                        onTap: () async {
+                          final isLoggedIn = await authProvider.signInWithApple(context: context);
+                          if (isLoggedIn && context.mounted) {
+                            _handleSuccessfulLogin(authProvider);
+                          }
+                        },
+                      ),
+                      const SizedBox(
+                        width: 20,
+                      ),
+                      SocialLoginIconWidget(
+                        iconName: facebookLogo,
+                        onTap: () async {
+                          final isLoggedIn = await authProvider.signInWithFacebook(context: context);
+                          if (isLoggedIn && context.mounted) {
+                            _handleSuccessfulLogin(authProvider);
+                          }
+                        },
+                      ),
                     ],
                   ),
                   const SizedBox(

@@ -69,6 +69,10 @@ dependencies:
   change_app_package_name: ^1.5.0
 
   firebase_core: ^3.12.1
+  firebase_auth: ^5.3.1
+  google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.2
+  flutter_facebook_auth: ^7.1.1
 
   geolocator: ^13.0.1
   geocoding: ^4.0.0
