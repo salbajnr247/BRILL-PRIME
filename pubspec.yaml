@@ -19,7 +19,7 @@ dependencies:
 
   shared_preferences: ^2.0.13
 
-  hive_flutter:
+  hive_flutter: ^1.1.0
 
   jiffy: ^6.2.1
 
@@ -37,8 +37,7 @@ dependencies:
 
   flutter_svg: ^2.2.0
 
-  flutter_screenutil: ^5.5.3+2f
-
+  flutter_screenutil: ^5.5.3+2
 
   provider: ^6.0.2
 
@@ -48,7 +47,7 @@ dependencies:
 
   permission_handler: ^12.0.1
 
-  share_plus:
+  share_plus: ^7.2.2
 
   fluttertoast: ^8.2.1
 
@@ -71,7 +70,7 @@ dependencies:
 
   firebase_core: ^3.12.1
 
-  geolocator:
+  geolocator: ^13.0.1
   geocoding: ^4.0.0
 
 #  For image upload
@@ -88,8 +87,8 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.4
 
-  hive_generator:
-  build_runner:
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.13
 
 flutter_launcher_icons:
   android: "launcher_icon"
