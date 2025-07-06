@@ -525,6 +525,7 @@ class AuthProvider extends ChangeNotifier {
             fullName: user.displayName ?? '',
             provider: 'google',
             socialId: user.uid,
+            photoUrl: user.photoURL,
           );
           
           _isLoading = false;
@@ -533,7 +534,7 @@ class AuthProvider extends ChangeNotifier {
         }
       }
     } catch (e) {
-      _resMessage = 'Google sign in failed: ${e.toString()}';
+      _resMessage = 'Google sign in failed. Please try again.';
       debugPrint('Google Sign In Error: $e');
     }
 
@@ -560,6 +561,7 @@ class AuthProvider extends ChangeNotifier {
             fullName: user.displayName ?? '',
             provider: 'apple',
             socialId: user.uid,
+            photoUrl: user.photoURL,
           );
           
           _isLoading = false;
@@ -568,7 +570,7 @@ class AuthProvider extends ChangeNotifier {
         }
       }
     } catch (e) {
-      _resMessage = 'Apple sign in failed: ${e.toString()}';
+      _resMessage = 'Apple sign in failed. Please try again.';
       debugPrint('Apple Sign In Error: $e');
     }
 
@@ -595,6 +597,7 @@ class AuthProvider extends ChangeNotifier {
             fullName: user.displayName ?? '',
             provider: 'facebook',
             socialId: user.uid,
+            photoUrl: user.photoURL,
           );
           
           _isLoading = false;
@@ -603,7 +606,7 @@ class AuthProvider extends ChangeNotifier {
         }
       }
     } catch (e) {
-      _resMessage = 'Facebook sign in failed: ${e.toString()}';
+      _resMessage = 'Facebook sign in failed. Please try again.';
       debugPrint('Facebook Sign In Error: $e');
     }
 
@@ -619,6 +622,7 @@ class AuthProvider extends ChangeNotifier {
     required String fullName,
     required String provider,
     required String socialId,
+    String? photoUrl,
   }) async {
     final connected = await connectionChecker();
     
@@ -633,7 +637,8 @@ class AuthProvider extends ChangeNotifier {
         "email": email.toLowerCase(),
         "provider": provider,
         "social_id": socialId,
-        "role": selectedAccountType.toUpperCase()
+        "role": selectedAccountType.toUpperCase(),
+        "photo_url": photoUrl,
       };
 
       debugPrint("Social login payload: $body");
@@ -704,6 +709,7 @@ class AuthProvider extends ChangeNotifier {
         "social_id": socialId,
         "role": selectedAccountType.toUpperCase(),
         "phone": "", // Can be updated later
+        "photo_url": photoUrl,
       };
 
       debugPrint("Social registration payload: $body");
@@ -1393,12 +1399,18 @@ class AuthProvider extends ChangeNotifier {
       try {
         if (context.mounted) {
           (bool, String) logoutRequest = await ApiClient().postRequest(
-              getProfileEndpoint,
+              "auth/logout",
               context: context,
               printResponseBody: false,
               requestName: "Logout Request",
               body: {});
           if (logoutRequest.$1) {
+            // Sign out from social providers
+            await _socialAuthService.signOut();
+            
+            // Clear local data
+            await clearHiveData();
+            
             loggedOut = true;
             _loggingOut = false;
             notifyListeners();
