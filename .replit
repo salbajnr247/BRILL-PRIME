@@ -1,19 +1,8 @@
 modules = ["cpp-clang14", "c-clang14", "swift-5.8"]
-run = "flutter run"
+run = "Flutter run "
 
 [nix]
 channel = "stable-24_05"
 
 [deployment]
-run = ["sh", "-c", "flutter run"]
-
-[workflows]
-
-[[workflows.workflow]]
-name = "Run Tests"
-author = 40669021
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "flutter test"
+run = ["sh", "-c", "Flutter run "]
