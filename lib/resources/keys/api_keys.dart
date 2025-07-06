@@ -1,0 +1,2 @@
+const googleAPIKey = "AIzaSyBkXkVrju8h6e5-cUXMjcC0ZHSrtFbn8BI";
+const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dmluaWxubWltYXZvd2FhYnZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2ODYwMDgsImV4cCI6MjA1OTI2MjAwOH0.XDXG1vfAGj07PKsuXei0eTT9J_E2b1xq520ozWxVDu8";

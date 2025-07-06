@@ -1,0 +1,2 @@
+/Users/dangdat/StudioProjects/brill_prime/android/app/.cxx/Debug/654u6z3l/x86/CMakeFiles/edit_cache.dir
+/Users/dangdat/StudioProjects/brill_prime/android/app/.cxx/Debug/654u6z3l/x86/CMakeFiles/rebuild_cache.dir
