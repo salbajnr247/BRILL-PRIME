@@ -1,11 +1,7 @@
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
-import 'firebase_options.dart';
 import 'models/hive_models/biometric_detail_model.dart';
 import 'models/hive_models/hive_user_model.dart';
 import 'providers/address_book_provider.dart';
@@ -24,26 +20,67 @@ import 'providers/review_provider.dart';
 import 'providers/search_provider.dart';
 import 'providers/toll_gate_provider.dart';
 import 'providers/vendor_provider.dart';
-import 'resources/constants/color_constants.dart';
 import 'resources/constants/string_constants.dart';
 import 'ui/app/my_app.dart';
+import 'services/push_notifications.dart';
+import 'firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
 
-  // Firebase Auth is now configured for production use
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase initialization error: $e');
+  }
 
+  //Initialize Hive
   await Hive.initFlutter();
+
+  //Register adapter
   Hive.registerAdapter(HiveUserModelAdapter());
   Hive.registerAdapter(HiveBiometricModelAdapter());
+
+  //open box
   await Hive.openBox<HiveUserModel>(userBox);
   await Hive.openBox<HiveBiometricModel>(biometricBox);
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-  runApp(const MyApp());
+
+  const supaBaseURL = 'https://xrddnmvjmtxjjrjzlxqo.supabase.co';
+  const anonKey =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZGRubXZqbXR4ampyant6bHhxbyIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzI0NzI3MjA5LCJleHAiOjIwNDAzMDMyMDl9.xRQjGCUOhLN5p9QJOkJHVcCLKvBWBFYfVwKJdVkDFJo';
+
+  await Supabase.initialize(
+    url: supaBaseURL,
+    anonKey: anonKey,
+  );
+
+  await PushNotifications.init();
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => BottomNavProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        ChangeNotifierProvider(create: (_) => FavouritesProvider()),
+        ChangeNotifierProvider(create: (_) => ImageUploadProvider()),
+        ChangeNotifierProvider(create: (_) => InAppBrowserProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => OrderManagementProvider()),
+        ChangeNotifierProvider(create: (_) => PaymentMethodsProvider()),
+        ChangeNotifierProvider(create: (_) => ReviewProvider()),
+        ChangeNotifierProvider(create: (_) => SearchProvider()),
+        ChangeNotifierProvider(create: (_) => TollGateProvider()),
+        ChangeNotifierProvider(create: (_) => VendorProvider()),
+        ChangeNotifierProvider(create: (_) => AddressBookProvider()),
+        ChangeNotifierProvider(create: (_) => BankProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
