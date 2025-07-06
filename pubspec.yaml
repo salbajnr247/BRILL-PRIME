@@ -12,13 +12,8 @@ dependencies:
 
 
   cupertino_icons: ^1.0.8
-
   intl: ^0.20.2
-
-
-
   shared_preferences: ^2.0.13
-
   hive_flutter: ^1.1.0
 
   jiffy: ^6.2.1
@@ -132,8 +127,6 @@ flutter:
           weight: 500
         - asset: assets/fonts/Montserrat-Regular.ttf
           weight: 400
-        - asset: assets/fonts/Montserrat-Thin.ttf
-          weight: 300
         - asset: assets/fonts/Montserrat-Thin.ttf
           weight: 200
   #   - family: Trajan Pro
