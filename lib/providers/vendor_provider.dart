@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:brill_prime/models/category_model.dart';
 import 'package:brill_prime/models/commodities_model.dart';
+import 'package:brill_prime/models/vendor_analytics_model.dart';
+import 'package:brill_prime/models/vendor_subscription_model.dart';
 import 'package:flutter/material.dart';
 
 import '../models/customer_order_detail_model.dart';
@@ -454,6 +456,318 @@ class VendorProvider extends ChangeNotifier {
     } else {
       _resMessage = "Internet connection is not available";
       updatingVendorProfile = false;
+      notifyListeners();
+      return false;
+    }
+    return false;
+  }
+
+  // Vendor Analytics
+  VendorAnalyticsData? analyticsData;
+  bool loadingAnalytics = false;
+  Future<bool> getVendorAnalytics({
+    required BuildContext context,
+    String period = '30days',
+  }) async {
+    loadingAnalytics = true;
+    notifyListeners();
+    final connected = await connectionChecker();
+    if (connected) {
+      try {
+        if (context.mounted) {
+          (bool, String) response = await ApiClient().getRequest(
+            'vendors/me/analytics?period=$period',
+            context: context,
+            printResponseBody: true,
+            requestName: 'getVendorAnalytics',
+          );
+          loadingAnalytics = false;
+          if (response.$1) {
+            analyticsData = vendorAnalyticsModelFromJson(response.$2).data;
+            notifyListeners();
+            return true;
+          } else {
+            _resMessage = response.$2;
+            notifyListeners();
+            return false;
+          }
+        }
+      } catch (e) {
+        _resMessage = e.toString();
+        loadingAnalytics = false;
+        notifyListeners();
+        return false;
+      }
+    } else {
+      _resMessage = "Internet connection is not available";
+      loadingAnalytics = false;
+      notifyListeners();
+      return false;
+    }
+    return false;
+  }
+
+  // Vendor Subscription
+  VendorSubscriptionData? subscriptionData;
+  bool loadingSubscription = false;
+  Future<bool> getVendorSubscription({required BuildContext context}) async {
+    loadingSubscription = true;
+    notifyListeners();
+    final connected = await connectionChecker();
+    if (connected) {
+      try {
+        if (context.mounted) {
+          (bool, String) response = await ApiClient().getRequest(
+            'vendors/me/subscription',
+            context: context,
+            printResponseBody: true,
+            requestName: 'getVendorSubscription',
+          );
+          loadingSubscription = false;
+          if (response.$1) {
+            subscriptionData = vendorSubscriptionModelFromJson(response.$2).data;
+            notifyListeners();
+            return true;
+          } else {
+            _resMessage = response.$2;
+            notifyListeners();
+            return false;
+          }
+        }
+      } catch (e) {
+        _resMessage = e.toString();
+        loadingSubscription = false;
+        notifyListeners();
+        return false;
+      }
+    } else {
+      _resMessage = "Internet connection is not available";
+      loadingSubscription = false;
+      notifyListeners();
+      return false;
+    }
+    return false;
+  }
+
+  // Subscribe to plan
+  bool subscribingToPlan = false;
+  Future<bool> subscribeToPlan({
+    required BuildContext context,
+    required String planId,
+  }) async {
+    subscribingToPlan = true;
+    notifyListeners();
+    final connected = await connectionChecker();
+    if (connected) {
+      try {
+        if (context.mounted) {
+          (bool, String) response = await ApiClient().postRequest(
+            'vendors/me/subscription/subscribe',
+            context: context,
+            body: {'planId': planId},
+            printResponseBody: true,
+            requestName: 'subscribeToPlan',
+          );
+          subscribingToPlan = false;
+          if (response.$1) {
+            _resMessage = "Successfully subscribed to plan";
+            notifyListeners();
+            return true;
+          } else {
+            _resMessage = response.$2;
+            notifyListeners();
+            return false;
+          }
+        }
+      } catch (e) {
+        _resMessage = e.toString();
+        subscribingToPlan = false;
+        notifyListeners();
+        return false;
+      }
+    } else {
+      _resMessage = "Internet connection is not available";
+      subscribingToPlan = false;
+      notifyListeners();
+      return false;
+    }
+    return false;
+  }
+
+  // Inventory management
+  bool updatingInventory = false;
+  Future<bool> updateInventoryLevels({
+    required BuildContext context,
+    required Map<String, dynamic> inventoryData,
+  }) async {
+    updatingInventory = true;
+    notifyListeners();
+    final connected = await connectionChecker();
+    if (connected) {
+      try {
+        if (context.mounted) {
+          (bool, String) response = await ApiClient().patchRequest(
+            'vendors/me/inventory',
+            context: context,
+            body: inventoryData,
+            printResponseBody: true,
+            requestName: 'updateInventoryLevels',
+          );
+          updatingInventory = false;
+          if (response.$1) {
+            _resMessage = "Inventory updated successfully";
+            notifyListeners();
+            return true;
+          } else {
+            _resMessage = response.$2;
+            notifyListeners();
+            return false;
+          }
+        }
+      } catch (e) {
+        _resMessage = e.toString();
+        updatingInventory = false;
+        notifyListeners();
+        return false;
+      }
+    } else {
+      _resMessage = "Internet connection is not available";
+      updatingInventory = false;
+      notifyListeners();
+      return false;
+    }
+    return false;
+  }
+
+  // Business hours management
+  Map<String, dynamic>? businessHours;
+  bool updatingBusinessHours = false;
+  Future<bool> updateBusinessHours({
+    required BuildContext context,
+    required Map<String, dynamic> hoursData,
+  }) async {
+    updatingBusinessHours = true;
+    notifyListeners();
+    final connected = await connectionChecker();
+    if (connected) {
+      try {
+        if (context.mounted) {
+          (bool, String) response = await ApiClient().patchRequest(
+            'vendors/me/business-hours',
+            context: context,
+            body: hoursData,
+            printResponseBody: true,
+            requestName: 'updateBusinessHours',
+          );
+          updatingBusinessHours = false;
+          if (response.$1) {
+            businessHours = hoursData;
+            _resMessage = "Business hours updated successfully";
+            notifyListeners();
+            return true;
+          } else {
+            _resMessage = response.$2;
+            notifyListeners();
+            return false;
+          }
+        }
+      } catch (e) {
+        _resMessage = e.toString();
+        updatingBusinessHours = false;
+        notifyListeners();
+        return false;
+      }
+    } else {
+      _resMessage = "Internet connection is not available";
+      updatingBusinessHours = false;
+      notifyListeners();
+      return false;
+    }
+    return false;
+  }
+
+  // Multi-vendor support
+  List<dynamic> connectedVendors = [];
+  bool loadingConnectedVendors = false;
+  Future<bool> getConnectedVendors({required BuildContext context}) async {
+    loadingConnectedVendors = true;
+    notifyListeners();
+    final connected = await connectionChecker();
+    if (connected) {
+      try {
+        if (context.mounted) {
+          (bool, String) response = await ApiClient().getRequest(
+            'vendors/me/connected-vendors',
+            context: context,
+            printResponseBody: true,
+            requestName: 'getConnectedVendors',
+          );
+          loadingConnectedVendors = false;
+          if (response.$1) {
+            final responseData = json.decode(response.$2);
+            connectedVendors = responseData['data'] ?? [];
+            notifyListeners();
+            return true;
+          } else {
+            _resMessage = response.$2;
+            notifyListeners();
+            return false;
+          }
+        }
+      } catch (e) {
+        _resMessage = e.toString();
+        loadingConnectedVendors = false;
+        notifyListeners();
+        return false;
+      }
+    } else {
+      _resMessage = "Internet connection is not available";
+      loadingConnectedVendors = false;
+      notifyListeners();
+      return false;
+    }
+    return false;
+  }
+
+  // Connect with vendor
+  bool connectingWithVendor = false;
+  Future<bool> connectWithVendor({
+    required BuildContext context,
+    required String vendorId,
+  }) async {
+    connectingWithVendor = true;
+    notifyListeners();
+    final connected = await connectionChecker();
+    if (connected) {
+      try {
+        if (context.mounted) {
+          (bool, String) response = await ApiClient().postRequest(
+            'vendors/me/connect-vendor',
+            context: context,
+            body: {'vendorId': vendorId},
+            printResponseBody: true,
+            requestName: 'connectWithVendor',
+          );
+          connectingWithVendor = false;
+          if (response.$1) {
+            _resMessage = "Successfully connected with vendor";
+            notifyListeners();
+            return true;
+          } else {
+            _resMessage = response.$2;
+            notifyListeners();
+            return false;
+          }
+        }
+      } catch (e) {
+        _resMessage = e.toString();
+        connectingWithVendor = false;
+        notifyListeners();
+        return false;
+      }
+    } else {
+      _resMessage = "Internet connection is not available";
+      connectingWithVendor = false;
       notifyListeners();
       return false;
     }
