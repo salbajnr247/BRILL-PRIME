@@ -64,5 +64,24 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>flutter_deeplinkexample</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.brill.prime</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.19370311423-YOUR_CLIENT_ID</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

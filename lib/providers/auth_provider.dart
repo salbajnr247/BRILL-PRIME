@@ -23,14 +23,17 @@ import '../resources/constants/endpoints.dart';
 import '../resources/constants/string_constants.dart';
 import '../services/api_client.dart';
 import '../services/biometric_auth_service.dart';
+import '../services/social_auth_service.dart';
 import '../ui/confirm_email/confirm_email_screen.dart';
 import '../utils/functions.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../utils/navigation_util.dart';
 
 class AuthProvider extends ChangeNotifier {
   bool isError = true;
+  final SocialAuthService _socialAuthService = SocialAuthService();
 
   String selectedAccountType = consumer;
   void updateAccountType(String accountType) {
@@ -502,6 +505,250 @@ class AuthProvider extends ChangeNotifier {
     }
 
     return enabled;
+  }
+
+  // Google Sign In
+  Future<bool> signInWithGoogle({required BuildContext context}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final UserCredential? userCredential = await _socialAuthService.signInWithGoogle();
+      
+      if (userCredential != null) {
+        final User? user = userCredential.user;
+        if (user != null) {
+          // Create user account or login with backend
+          bool success = await _handleSocialLogin(
+            context: context,
+            email: user.email ?? '',
+            fullName: user.displayName ?? '',
+            provider: 'google',
+            socialId: user.uid,
+          );
+          
+          _isLoading = false;
+          notifyListeners();
+          return success;
+        }
+      }
+    } catch (e) {
+      _resMessage = 'Google sign in failed: ${e.toString()}';
+      debugPrint('Google Sign In Error: $e');
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+
+  // Apple Sign In
+  Future<bool> signInWithApple({required BuildContext context}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final UserCredential? userCredential = await _socialAuthService.signInWithApple();
+      
+      if (userCredential != null) {
+        final User? user = userCredential.user;
+        if (user != null) {
+          // Create user account or login with backend
+          bool success = await _handleSocialLogin(
+            context: context,
+            email: user.email ?? '',
+            fullName: user.displayName ?? '',
+            provider: 'apple',
+            socialId: user.uid,
+          );
+          
+          _isLoading = false;
+          notifyListeners();
+          return success;
+        }
+      }
+    } catch (e) {
+      _resMessage = 'Apple sign in failed: ${e.toString()}';
+      debugPrint('Apple Sign In Error: $e');
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+
+  // Facebook Sign In
+  Future<bool> signInWithFacebook({required BuildContext context}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final UserCredential? userCredential = await _socialAuthService.signInWithFacebook();
+      
+      if (userCredential != null) {
+        final User? user = userCredential.user;
+        if (user != null) {
+          // Create user account or login with backend
+          bool success = await _handleSocialLogin(
+            context: context,
+            email: user.email ?? '',
+            fullName: user.displayName ?? '',
+            provider: 'facebook',
+            socialId: user.uid,
+          );
+          
+          _isLoading = false;
+          notifyListeners();
+          return success;
+        }
+      }
+    } catch (e) {
+      _resMessage = 'Facebook sign in failed: ${e.toString()}';
+      debugPrint('Facebook Sign In Error: $e');
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+
+  // Handle social login with backend
+  Future<bool> _handleSocialLogin({
+    required BuildContext context,
+    required String email,
+    required String fullName,
+    required String provider,
+    required String socialId,
+  }) async {
+    final connected = await connectionChecker();
+    
+    if (!connected) {
+      _resMessage = "Internet connection is not available";
+      return false;
+    }
+
+    try {
+      // First try to login with social credentials
+      final body = {
+        "email": email.toLowerCase(),
+        "provider": provider,
+        "social_id": socialId,
+        "role": selectedAccountType.toUpperCase()
+      };
+
+      debugPrint("Social login payload: $body");
+
+      (bool, String) loginRequest = await ApiClient().postRequest(
+        "auth/social-login",
+        context: context,
+        body: body,
+        printResponseBody: true,
+        requestName: "Social Login"
+      );
+
+      if (loginRequest.$1) {
+        // Login successful
+        _userModel = userModelFromJson(loginRequest.$2);
+        
+        HiveUserModel hiveUserModel = HiveUserModel(
+          userId: socialId,
+          fullName: fullName,
+          email: email,
+          token: _userModel?.data.accessToken ?? "",
+          phoneNumber: "",
+          userName: "",
+          address: "",
+          vcn: "",
+          role: selectedAccountType
+        );
+        
+        _hiveUserData = hiveUserModel;
+        Hive.box<HiveUserModel>(userBox).put(hiveUserModel.userId, hiveUserModel);
+        
+        // Get user profile
+        if (context.mounted) {
+          await getProfile(context: context);
+        }
+        
+        return true;
+      } else {
+        // If login fails, try to register the user
+        return await _registerSocialUser(
+          context: context,
+          email: email,
+          fullName: fullName,
+          provider: provider,
+          socialId: socialId,
+        );
+      }
+    } catch (e) {
+      _resMessage = "Social login failed: ${e.toString()}";
+      debugPrint("Social login error: $e");
+      return false;
+    }
+  }
+
+  // Register user from social login
+  Future<bool> _registerSocialUser({
+    required BuildContext context,
+    required String email,
+    required String fullName,
+    required String provider,
+    required String socialId,
+  }) async {
+    try {
+      final body = {
+        "email": email.toLowerCase(),
+        "fullName": fullName,
+        "provider": provider,
+        "social_id": socialId,
+        "role": selectedAccountType.toUpperCase(),
+        "phone": "", // Can be updated later
+      };
+
+      debugPrint("Social registration payload: $body");
+
+      (bool, String) registerRequest = await ApiClient().postRequest(
+        "auth/social-register",
+        context: context,
+        body: body,
+        printResponseBody: true,
+        requestName: "Social Registration"
+      );
+
+      if (registerRequest.$1) {
+        _userModel = userModelFromJson(registerRequest.$2);
+        
+        HiveUserModel hiveUserModel = HiveUserModel(
+          userId: socialId,
+          fullName: fullName,
+          email: email,
+          token: _userModel?.data.accessToken ?? "",
+          phoneNumber: "",
+          userName: "",
+          address: "",
+          vcn: "",
+          role: selectedAccountType
+        );
+        
+        _hiveUserData = hiveUserModel;
+        Hive.box<HiveUserModel>(userBox).put(hiveUserModel.userId, hiveUserModel);
+        
+        // Get user profile
+        if (context.mounted) {
+          await getProfile(context: context);
+        }
+        
+        return true;
+      } else {
+        _resMessage = registerRequest.$2;
+        return false;
+      }
+    } catch (e) {
+      _resMessage = "Social registration failed: ${e.toString()}";
+      debugPrint("Social registration error: $e");
+      return false;
+    }
   }
 
   bool _verifyingOTP = false;
