@@ -9,12 +9,3 @@ run = ["sh", "-c", "flutter run --web-hostname=0.0.0.0 --web-port=5000"]
 
 [workflows]
 runButton = "Flutter Run"
-
-[[workflows.workflow]]
-name = "Flutter Run"
-author = 40669021
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "flutter doctor && flutter pub get && flutter run --web-hostname=0.0.0.0 --web-port=5000"
