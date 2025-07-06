@@ -17,4 +17,4 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "export PATH=\"$PATH:/usr/local/flutter/bin\" && flutter doctor && flutter pub get && flutter run --web-hostname=0.0.0.0 --web-port=5000"
+args = "flutter doctor && flutter pub get && flutter run --web-hostname=0.0.0.0 --web-port=5000"
