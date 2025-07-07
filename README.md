@@ -1,17 +1,20 @@
-# brill_prime
+# Brill Prime
 
-A new Flutter project.
+Brill Prime is an application designed for vendors to manage their sales, inventory, and business operations.
+
+## Features
+
+- **Sales Analytics**: Visualize sales data with charts and key performance metrics.
+- **Inventory Management**: Manage items effectively, including adding, editing, and deleting inventory items.
+- **Business Hours Management**: Set and manage business operating hours.
+- **Order Management**: Improved order functionalities for better handling of vendor orders.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
 
-A few resources to get you started if this is your first Flutter project:
+### Prerequisites
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- Flutter SDK: Ensure you have Flutter installed. You can follow the installation [guide here](https://flutter.dev/docs/get-started/install).
+- Dart SDK: Comes bundled with Flutter but ensure it is correctly configured.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-# brill-prime-mobile
+#BrillPrime
