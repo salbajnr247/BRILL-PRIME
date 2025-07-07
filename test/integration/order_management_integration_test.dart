@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:provider/provider.dart';
 
-import '../../lib/ui/orders/order_management_screen.dart';
-import '../../lib/providers/order_management_provider.dart';
+import '../../../lib/ui/orders/order_management_screen.dart';
+import '../../../lib/providers/order_management_provider.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

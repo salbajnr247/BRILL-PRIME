@@ -9,6 +9,7 @@ packages = ["gnomeExtensions.window-calls-extended", "ipscan"]
 run = ["sh", "-c", "flutter run"]
 
 [workflows]
+runButton = "Flutter App"
 
 [[workflows.workflow]]
 name = "Run Tests"
@@ -18,3 +19,16 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "flutter test"
+
+[[workflows.workflow]]
+name = "Flutter App"
+author = 40669021
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter pub get"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter run --web-port 5000 --web-hostname 0.0.0.0"
