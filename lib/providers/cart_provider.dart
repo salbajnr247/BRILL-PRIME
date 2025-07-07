@@ -163,6 +163,14 @@ class CartProvider extends ChangeNotifier {
   List<CartItem> _savedItems = [];
   List<CartItem> get savedItems => _savedItems;
 
+  // Guest checkout functionality
+  bool _isGuestCheckout = false;
+  bool get isGuestCheckout => _isGuestCheckout;
+
+  // Cart session management
+  String? _cartSessionId;
+  String? get cartSessionId => _cartSessionId;
+
   void saveForLater(String commodityId) {
     final index = _items.indexWhere((item) => item.commodityId == commodityId);
     if (index >= 0) {
@@ -183,6 +191,81 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
+  void removeSavedItem(String commodityId) {
+    _savedItems.removeWhere((item) => item.commodityId == commodityId);
+    _saveSavedItemsToStorage();
+    notifyListeners();
+  }
+
+  void clearSavedItems() {
+    _savedItems.clear();
+    _saveSavedItemsToStorage();
+    notifyListeners();
+  }
+
+  // Guest checkout methods
+  void enableGuestCheckout() {
+    _isGuestCheckout = true;
+    _cartSessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    _saveCartToStorage();
+    notifyListeners();
+  }
+
+  void disableGuestCheckout() {
+    _isGuestCheckout = false;
+    _cartSessionId = null;
+    _saveCartToStorage();
+    notifyListeners();
+  }
+
+  // Enhanced persistence methods
+  Future<void> _loadCartFromStorage() async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Load cart items
+      final cartData = prefs.getString('cart_items');
+      if (cartData != null) {
+        final List<dynamic> decodedData = json.decode(cartData);
+        _items = decodedData.map((item) => CartItem.fromJson(item)).toList();
+      }
+      
+      // Load saved items
+      final savedData = prefs.getString('saved_items');
+      if (savedData != null) {
+        final List<dynamic> decodedSavedData = json.decode(savedData);
+        _savedItems = decodedSavedData.map((item) => CartItem.fromJson(item)).toList();
+      }
+      
+      // Load guest checkout status
+      _isGuestCheckout = prefs.getBool('is_guest_checkout') ?? false;
+      _cartSessionId = prefs.getString('cart_session_id');
+      
+    } catch (e) {
+      debugPrint('Error loading cart: $e');
+    }
+    
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> _saveCartToStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cartData = json.encode(_items.map((item) => item.toJson()).toList());
+      await prefs.setString('cart_items', cartData);
+      await prefs.setBool('is_guest_checkout', _isGuestCheckout);
+      if (_cartSessionId != null) {
+        await prefs.setString('cart_session_id', _cartSessionId!);
+      }
+    } catch (e) {
+      debugPrint('Error saving cart: $e');
+    }
+  }
+
   Future<void> _saveSavedItemsToStorage() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -191,5 +274,53 @@ class CartProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error saving saved items: $e');
     }
+  }
+
+  // Merge guest cart with user cart on login
+  Future<void> mergeGuestCartWithUserCart() async {
+    if (_isGuestCheckout && _items.isNotEmpty) {
+      // Here you would typically sync with your backend
+      // For now, we'll just disable guest mode
+      _isGuestCheckout = false;
+      _cartSessionId = null;
+      _saveCartToStorage();
+      notifyListeners();
+    }
+  }
+
+  // Cart expiry management
+  Future<void> checkCartExpiry() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastSavedTime = prefs.getInt('cart_last_saved') ?? 0;
+      final currentTime = DateTime.now().millisecondsSinceEpoch;
+      final daysDifference = (currentTime - lastSavedTime) / (1000 * 60 * 60 * 24);
+      
+      // Clear cart if older than 30 days
+      if (daysDifference > 30) {
+        clearCart();
+        clearSavedItems();
+      }
+    } catch (e) {
+      debugPrint('Error checking cart expiry: $e');
+    }
+  }
+
+  // Enhanced cart statistics
+  Map<String, dynamic> getCartStatistics() {
+    final totalItems = itemCount;
+    final totalValue = totalAmount;
+    final uniqueProducts = _items.length;
+    final vendorCount = this.vendorCount;
+    
+    return {
+      'totalItems': totalItems,
+      'totalValue': totalValue,
+      'uniqueProducts': uniqueProducts,
+      'vendorCount': vendorCount,
+      'savedItemsCount': _savedItems.length,
+      'isGuestCheckout': _isGuestCheckout,
+      'cartSessionId': _cartSessionId,
+    };
   }
 }
