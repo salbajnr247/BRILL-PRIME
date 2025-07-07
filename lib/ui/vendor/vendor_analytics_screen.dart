@@ -7,6 +7,7 @@ import 'package:brill_prime/resources/constants/color_constants.dart';
 import 'package:brill_prime/resources/constants/font_constants.dart';
 import 'package:brill_prime/ui/widgets/custom_appbar.dart';
 import 'package:brill_prime/ui/widgets/loading_indicator.dart';
+import 'package:brill_prime/ui/widgets/components.dart';
 
 class VendorAnalyticsScreen extends StatefulWidget {
   const VendorAnalyticsScreen({super.key});

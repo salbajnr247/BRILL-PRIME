@@ -74,6 +74,14 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
 
                   // Recent orders
                   _buildRecentOrders(vendorProvider),
+                  SizedBox(height: 24.h),
+
+                  // Inventory overview
+                  _buildInventoryOverview(vendorProvider),
+                  SizedBox(height: 24.h),
+
+                  // Business hours overview
+                  _buildBusinessHoursOverview(vendorProvider),
                 ],
               ),
             ),
@@ -412,6 +420,26 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
             SizedBox(width: 12.w),
             Expanded(
               child: _buildActionCard(
+                "Inventory",
+                Icons.inventory,
+                () => context.push('/vendor-inventory'),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12.h),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                "Business Hours",
+                Icons.schedule,
+                () => context.push('/vendor-business-hours'),
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: _buildActionCard(
                 "Profile",
                 Icons.person,
                 () => context.push('/vendor-profile'),
@@ -555,6 +583,197 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
           ),
       ],
     );
+  }
+
+  Widget _buildInventoryOverview(VendorProvider provider) {
+    final inventory = provider.analyticsData?.inventoryMetrics;
+    
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.grey300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Inventory Overview",
+                style: TextStyle(
+                  fontFamily: FontConstants.montserratSemiBold,
+                  fontSize: 16.sp,
+                  color: AppColors.black,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => context.push('/vendor-inventory'),
+                child: Text(
+                  "Manage",
+                  style: TextStyle(
+                    fontFamily: FontConstants.montserratMedium,
+                    fontSize: 12.sp,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildInventoryCard(
+                  "Total Products",
+                  "${inventory?.totalProducts ?? 0}",
+                  Colors.blue,
+                  Icons.inventory_2,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: _buildInventoryCard(
+                  "Low Stock",
+                  "${inventory?.lowStockProducts ?? 0}",
+                  Colors.orange,
+                  Icons.warning,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildInventoryCard(
+                  "Out of Stock",
+                  "${inventory?.outOfStockProducts ?? 0}",
+                  Colors.red,
+                  Icons.remove_circle,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: _buildInventoryCard(
+                  "Turnover",
+                  "${inventory?.inventoryTurnover.toStringAsFixed(1) ?? '0.0'}x",
+                  Colors.green,
+                  Icons.autorenew,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInventoryCard(String title, String value, Color color, IconData icon) {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 20.sp),
+          SizedBox(height: 4.h),
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: FontConstants.montserratBold,
+              fontSize: 16.sp,
+              color: AppColors.black,
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontFamily: FontConstants.montserratMedium,
+              fontSize: 10.sp,
+              color: AppColors.grey600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessHoursOverview(VendorProvider provider) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.grey300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Business Hours",
+                style: TextStyle(
+                  fontFamily: FontConstants.montserratSemiBold,
+                  fontSize: 16.sp,
+                  color: AppColors.black,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => context.push('/vendor-business-hours'),
+                child: Text(
+                  "Edit",
+                  style: TextStyle(
+                    fontFamily: FontConstants.montserratMedium,
+                    fontSize: 12.sp,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Icon(Icons.access_time, color: AppColors.primary, size: 20.sp),
+              SizedBox(width: 8.w),
+              Text(
+                _isBusinessOpen() ? "Open Now" : "Closed",
+                style: TextStyle(
+                  fontFamily: FontConstants.montserratSemiBold,
+                  fontSize: 14.sp,
+                  color: _isBusinessOpen() ? Colors.green : Colors.red,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            "Today: 9:00 AM - 6:00 PM",
+            style: TextStyle(
+              fontFamily: FontConstants.montserratRegular,
+              fontSize: 12.sp,
+              color: AppColors.grey700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isBusinessOpen() {
+    final now = DateTime.now();
+    final currentHour = now.hour;
+    // Simplified logic - assuming business hours are 9 AM to 6 PM
+    return currentHour >= 9 && currentHour < 18;
   }
 
   Color _getStatusColor(String status) {
