@@ -1,8 +1,20 @@
-modules = ["cpp-clang14", "c-clang14", "swift-5.8"]
-run = "Flutter run "
+modules = ["cpp-clang14", "c-clang14", "swift-5.8", "dart-2.18", "dart-3.5", "java-graalvm22.3", "nix", "swift-5.6", "web", "gcloud", "bash", "deno-2"]
+run = "flutter run"
 
 [nix]
 channel = "stable-24_05"
+packages = ["gnomeExtensions.window-calls-extended", "ipscan"]
 
 [deployment]
-run = ["sh", "-c", "Flutter run "]
+run = ["sh", "-c", "flutter run"]
+
+[workflows]
+
+[[workflows.workflow]]
+name = "Run Tests"
+author = 40669021
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter test"

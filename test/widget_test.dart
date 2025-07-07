@@ -1,29 +1,55 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:brill_prime/ui/app/my_app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:brill_prime/providers/auth_provider.dart';
+import 'package:brill_prime/providers/bottom_nav_provider.dart';
+import 'package:brill_prime/providers/cart_provider.dart';
+import 'package:brill_prime/providers/dashboard_provider.dart';
+import 'package:brill_prime/providers/favourites_provider.dart';
+import 'package:brill_prime/providers/image_upload_provider.dart';
+import 'package:brill_prime/providers/in_app_browser_provider.dart';
+import 'package:brill_prime/providers/notification_provider.dart';
+import 'package:brill_prime/providers/order_management_provider.dart';
+import 'package:brill_prime/providers/payment_methods_provider.dart';
+import 'package:brill_prime/providers/review_provider.dart';
+import 'package:brill_prime/providers/search_provider.dart';
+import 'package:brill_prime/providers/toll_gate_provider.dart';
+import 'package:brill_prime/providers/vendor_provider.dart';
+import 'package:brill_prime/providers/address_book_provider.dart';
+import 'package:brill_prime/providers/bank_provider.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('BrillPrime App Tests', () {
+    testWidgets('App smoke test', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => AuthProvider()),
+            ChangeNotifierProvider(create: (_) => BottomNavProvider()),
+            ChangeNotifierProvider(create: (_) => CartProvider()),
+            ChangeNotifierProvider(create: (_) => DashboardProvider()),
+            ChangeNotifierProvider(create: (_) => FavouritesProvider()),
+            ChangeNotifierProvider(create: (_) => ImageUploadProvider()),
+            ChangeNotifierProvider(create: (_) => InAppBrowserProvider()),
+            ChangeNotifierProvider(create: (_) => NotificationProvider()),
+            ChangeNotifierProvider(create: (_) => OrderManagementProvider()),
+            ChangeNotifierProvider(create: (_) => PaymentMethodsProvider()),
+            ChangeNotifierProvider(create: (_) => ReviewProvider()),
+            ChangeNotifierProvider(create: (_) => SearchProvider()),
+            ChangeNotifierProvider(create: (_) => TollGateProvider()),
+            ChangeNotifierProvider(create: (_) => VendorProvider()),
+            ChangeNotifierProvider(create: (_) => AddressBookProvider()),
+            ChangeNotifierProvider(create: (_) => BankProvider()),
+          ],
+          child: const MyApp(),
+        ),
+      );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      // Verify the app builds without crashing
+      await tester.pumpAndSettle();
+      expect(find.byType(MaterialApp), findsOneWidget);
+    });
   });
 }
