@@ -23,7 +23,7 @@ args = "flutter test"
 [[workflows.workflow]]
 name = "Flutter App"
 author = 40669021
-mode = "sequential"
+mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

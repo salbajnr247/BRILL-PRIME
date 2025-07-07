@@ -1,275 +1,266 @@
 
 import 'dart:convert';
 import 'dart:math';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:package_info_plus/package_info_plus.dart';
+import 'package:crypto/crypto.dart';
 
 class SecurityService {
-  static const String _deviceIdKey = 'device_id';
+  static const String _failedLoginAttemptsKey = 'failed_login_attempts';
+  static const String _accountLockedUntilKey = 'account_locked_until';
   static const String _sessionTokenKey = 'session_token';
+  static const String _sessionExpiresKey = 'session_expires';
   static const String _lastLoginKey = 'last_login';
-  static const String _failedAttemptsKey = 'failed_attempts';
-  static const String _lockoutTimeKey = 'lockout_time';
-  static const int _maxFailedAttempts = 5;
-  static const int _lockoutDurationMinutes = 15;
+  
+  static const int maxFailedAttempts = 5;
+  static const int lockoutDurationMinutes = 30;
+  static const int sessionDurationHours = 24;
 
-  // Generate secure device ID
-  Future<String> getDeviceId() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      String? deviceId = prefs.getString(_deviceIdKey);
-      
-      if (deviceId == null) {
-        deviceId = await _generateDeviceId();
-        await prefs.setString(_deviceIdKey, deviceId);
-      }
-      
-      return deviceId;
-    } catch (e) {
-      debugPrint("Error getting device ID: $e");
-      return _generateRandomString(32);
-    }
-  }
-
-  // Generate device-specific ID
-  Future<String> _generateDeviceId() async {
-    try {
-      final deviceInfo = DeviceInfoPlugin();
-      final packageInfo = await PackageInfo.fromPlatform();
-      
-      String deviceIdentifier = '';
-      
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        final androidInfo = await deviceInfo.androidInfo;
-        deviceIdentifier = '${androidInfo.id}_${androidInfo.model}_${androidInfo.manufacturer}';
-      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-        final iosInfo = await deviceInfo.iosInfo;
-        deviceIdentifier = '${iosInfo.identifierForVendor}_${iosInfo.model}_${iosInfo.systemVersion}';
-      } else {
-        deviceIdentifier = packageInfo.packageName;
-      }
-      
-      // Hash the device identifier for privacy
-      final bytes = utf8.encode(deviceIdentifier + packageInfo.version);
-      final digest = sha256.convert(bytes);
-      return digest.toString();
-    } catch (e) {
-      debugPrint("Error generating device ID: $e");
-      return _generateRandomString(32);
-    }
-  }
-
-  // Generate random string
-  String _generateRandomString(int length) {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    final random = Random.secure();
-    return String.fromCharCodes(Iterable.generate(
-      length, (_) => chars.codeUnitAt(random.nextInt(chars.length))));
-  }
-
-  // Generate session token
-  Future<String> generateSessionToken() async {
-    try {
-      final deviceId = await getDeviceId();
-      final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-      final randomString = _generateRandomString(16);
-      
-      final tokenData = '$deviceId:$timestamp:$randomString';
-      final bytes = utf8.encode(tokenData);
-      final digest = sha256.convert(bytes);
-      
-      final sessionToken = digest.toString();
-      
-      // Store session token
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_sessionTokenKey, sessionToken);
-      
-      return sessionToken;
-    } catch (e) {
-      debugPrint("Error generating session token: $e");
-      return _generateRandomString(64);
-    }
-  }
-
-  // Validate session token
-  Future<bool> validateSessionToken(String token) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final storedToken = prefs.getString(_sessionTokenKey);
-      return storedToken == token && token.isNotEmpty;
-    } catch (e) {
-      debugPrint("Error validating session token: $e");
-      return false;
-    }
-  }
-
-  // Clear session
-  Future<void> clearSession() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_sessionTokenKey);
-      await prefs.remove(_lastLoginKey);
-    } catch (e) {
-      debugPrint("Error clearing session: $e");
-    }
-  }
-
-  // Record login attempt
-  Future<void> recordLoginAttempt(bool success) async {
+  /// Record a login attempt (successful or failed)
+  Future<void> recordLoginAttempt(bool successful) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      if (success) {
-        // Clear failed attempts on successful login
-        await prefs.remove(_failedAttemptsKey);
-        await prefs.remove(_lockoutTimeKey);
-        await prefs.setInt(_lastLoginKey, DateTime.now().millisecondsSinceEpoch);
+      if (successful) {
+        // Reset failed attempts on successful login
+        await prefs.setInt(_failedLoginAttemptsKey, 0);
+        await prefs.remove(_accountLockedUntilKey);
+        await prefs.setString(_lastLoginKey, DateTime.now().toIso8601String());
       } else {
         // Increment failed attempts
-        final failedAttempts = (prefs.getInt(_failedAttemptsKey) ?? 0) + 1;
-        await prefs.setInt(_failedAttemptsKey, failedAttempts);
+        final currentAttempts = prefs.getInt(_failedLoginAttemptsKey) ?? 0;
+        final newAttempts = currentAttempts + 1;
+        await prefs.setInt(_failedLoginAttemptsKey, newAttempts);
         
-        // Set lockout if max attempts reached
-        if (failedAttempts >= _maxFailedAttempts) {
-          final lockoutTime = DateTime.now().add(
-            Duration(minutes: _lockoutDurationMinutes)
-          ).millisecondsSinceEpoch;
-          await prefs.setInt(_lockoutTimeKey, lockoutTime);
+        // Lock account if max attempts reached
+        if (newAttempts >= maxFailedAttempts) {
+          final lockUntil = DateTime.now().add(Duration(minutes: lockoutDurationMinutes));
+          await prefs.setString(_accountLockedUntilKey, lockUntil.toIso8601String());
         }
       }
     } catch (e) {
-      debugPrint("Error recording login attempt: $e");
+      debugPrint('Error recording login attempt: $e');
     }
   }
 
-  // Check if account is locked
+  /// Check if account is currently locked
   Future<bool> isAccountLocked() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final lockoutTime = prefs.getInt(_lockoutTimeKey);
+      final failedAttempts = prefs.getInt(_failedLoginAttemptsKey) ?? 0;
       
-      if (lockoutTime == null) return false;
-      
-      if (DateTime.now().millisecondsSinceEpoch < lockoutTime) {
-        return true;
-      } else {
-        // Lockout period expired, clear lockout
-        await prefs.remove(_lockoutTimeKey);
-        await prefs.remove(_failedAttemptsKey);
+      if (failedAttempts < maxFailedAttempts) {
         return false;
       }
+      
+      final lockedUntilString = prefs.getString(_accountLockedUntilKey);
+      if (lockedUntilString == null) {
+        return false;
+      }
+      
+      final lockedUntil = DateTime.parse(lockedUntilString);
+      final now = DateTime.now();
+      
+      if (now.isAfter(lockedUntil)) {
+        // Lock period has expired, reset failed attempts
+        await prefs.setInt(_failedLoginAttemptsKey, 0);
+        await prefs.remove(_accountLockedUntilKey);
+        return false;
+      }
+      
+      return true;
     } catch (e) {
-      debugPrint("Error checking account lock: $e");
+      debugPrint('Error checking account lock status: $e');
       return false;
     }
   }
 
-  // Get remaining lockout time
+  /// Get remaining lockout time
   Future<Duration?> getRemainingLockoutTime() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final lockoutTime = prefs.getInt(_lockoutTimeKey);
+      final lockedUntilString = prefs.getString(_accountLockedUntilKey);
       
-      if (lockoutTime == null) return null;
-      
-      final now = DateTime.now().millisecondsSinceEpoch;
-      if (now < lockoutTime) {
-        return Duration(milliseconds: lockoutTime - now);
+      if (lockedUntilString == null) {
+        return null;
       }
       
-      return null;
+      final lockedUntil = DateTime.parse(lockedUntilString);
+      final now = DateTime.now();
+      
+      if (now.isAfter(lockedUntil)) {
+        return null;
+      }
+      
+      return lockedUntil.difference(now);
     } catch (e) {
-      debugPrint("Error getting remaining lockout time: $e");
+      debugPrint('Error getting remaining lockout time: $e');
       return null;
     }
   }
 
-  // Get failed attempts count
-  Future<int> getFailedAttemptsCount() async {
+  /// Generate a session token
+  Future<String> generateSessionToken() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getInt(_failedAttemptsKey) ?? 0;
+      
+      // Generate random token
+      final random = Random.secure();
+      final tokenBytes = List<int>.generate(32, (i) => random.nextInt(256));
+      final token = base64Url.encode(tokenBytes);
+      
+      // Set expiration time
+      final expiresAt = DateTime.now().add(Duration(hours: sessionDurationHours));
+      
+      // Store token and expiration
+      await prefs.setString(_sessionTokenKey, token);
+      await prefs.setString(_sessionExpiresKey, expiresAt.toIso8601String());
+      
+      return token;
     } catch (e) {
-      debugPrint("Error getting failed attempts count: $e");
-      return 0;
+      debugPrint('Error generating session token: $e');
+      rethrow;
     }
   }
 
-  // Hash password securely
+  /// Validate current session
+  Future<bool> isSessionValid() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(_sessionTokenKey);
+      final expiresString = prefs.getString(_sessionExpiresKey);
+      
+      if (token == null || expiresString == null) {
+        return false;
+      }
+      
+      final expiresAt = DateTime.parse(expiresString);
+      final now = DateTime.now();
+      
+      if (now.isAfter(expiresAt)) {
+        // Session expired, clean up
+        await invalidateSession();
+        return false;
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint('Error validating session: $e');
+      return false;
+    }
+  }
+
+  /// Get current session token
+  Future<String?> getSessionToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_sessionTokenKey);
+    } catch (e) {
+      debugPrint('Error getting session token: $e');
+      return null;
+    }
+  }
+
+  /// Invalidate current session
+  Future<void> invalidateSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_sessionTokenKey);
+      await prefs.remove(_sessionExpiresKey);
+    } catch (e) {
+      debugPrint('Error invalidating session: $e');
+    }
+  }
+
+  /// Hash password securely
   String hashPassword(String password, String salt) {
     final bytes = utf8.encode(password + salt);
     final digest = sha256.convert(bytes);
     return digest.toString();
   }
 
-  // Generate salt
+  /// Generate salt for password hashing
   String generateSalt() {
-    return _generateRandomString(32);
+    final random = Random.secure();
+    final saltBytes = List<int>.generate(16, (i) => random.nextInt(256));
+    return base64Url.encode(saltBytes);
   }
 
-  // Validate password strength
+  /// Validate password strength
   Map<String, dynamic> validatePasswordStrength(String password) {
-    final hasMinLength = password.length >= 8;
-    final hasUppercase = password.contains(RegExp(r'[A-Z]'));
-    final hasLowercase = password.contains(RegExp(r'[a-z]'));
-    final hasDigits = password.contains(RegExp(r'[0-9]'));
-    final hasSpecialChar = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
-    
-    final score = [hasMinLength, hasUppercase, hasLowercase, hasDigits, hasSpecialChar]
-        .where((criteria) => criteria).length;
-    
-    String strength;
-    if (score < 3) {
-      strength = 'Weak';
-    } else if (score < 5) {
-      strength = 'Medium';
-    } else {
-      strength = 'Strong';
-    }
-    
+    final validations = {
+      'minLength': password.length >= 8,
+      'hasUppercase': password.contains(RegExp(r'[A-Z]')),
+      'hasLowercase': password.contains(RegExp(r'[a-z]')),
+      'hasNumbers': password.contains(RegExp(r'[0-9]')),
+      'hasSpecialChars': password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')),
+    };
+
+    final score = validations.values.where((v) => v).length;
+    final isStrong = score >= 4;
+
     return {
+      'isValid': isStrong,
       'score': score,
-      'strength': strength,
-      'hasMinLength': hasMinLength,
-      'hasUppercase': hasUppercase,
-      'hasLowercase': hasLowercase,
-      'hasDigits': hasDigits,
-      'hasSpecialChar': hasSpecialChar,
+      'validations': validations,
+      'suggestions': _getPasswordSuggestions(validations),
     };
   }
 
-  // Encrypt sensitive data
-  String encryptData(String data, String key) {
-    // Simple XOR encryption (use proper encryption in production)
-    final keyBytes = utf8.encode(key);
-    final dataBytes = utf8.encode(data);
-    final encrypted = <int>[];
+  List<String> _getPasswordSuggestions(Map<String, bool> validations) {
+    final suggestions = <String>[];
     
-    for (int i = 0; i < dataBytes.length; i++) {
-      encrypted.add(dataBytes[i] ^ keyBytes[i % keyBytes.length]);
+    if (!validations['minLength']!) {
+      suggestions.add('Use at least 8 characters');
     }
-    
-    return base64.encode(encrypted);
+    if (!validations['hasUppercase']!) {
+      suggestions.add('Include uppercase letters');
+    }
+    if (!validations['hasLowercase']!) {
+      suggestions.add('Include lowercase letters');
+    }
+    if (!validations['hasNumbers']!) {
+      suggestions.add('Include numbers');
+    }
+    if (!validations['hasSpecialChars']!) {
+      suggestions.add('Include special characters');
+    }
+
+    return suggestions;
   }
 
-  // Decrypt sensitive data
-  String decryptData(String encryptedData, String key) {
+  /// Get security metrics
+  Future<Map<String, dynamic>> getSecurityMetrics() async {
     try {
-      final keyBytes = utf8.encode(key);
-      final encrypted = base64.decode(encryptedData);
-      final decrypted = <int>[];
-      
-      for (int i = 0; i < encrypted.length; i++) {
-        decrypted.add(encrypted[i] ^ keyBytes[i % keyBytes.length]);
-      }
-      
-      return utf8.decode(decrypted);
+      final prefs = await SharedPreferences.getInstance();
+      final failedAttempts = prefs.getInt(_failedLoginAttemptsKey) ?? 0;
+      final lastLogin = prefs.getString(_lastLoginKey);
+      final isLocked = await isAccountLocked();
+      final sessionValid = await isSessionValid();
+
+      return {
+        'failedLoginAttempts': failedAttempts,
+        'isAccountLocked': isLocked,
+        'lastLogin': lastLogin,
+        'sessionValid': sessionValid,
+        'lockoutTime': await getRemainingLockoutTime(),
+      };
     } catch (e) {
-      debugPrint("Error decrypting data: $e");
-      return '';
+      debugPrint('Error getting security metrics: $e');
+      return {};
+    }
+  }
+
+  /// Clear all security data (for logout)
+  Future<void> clearSecurityData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_failedLoginAttemptsKey);
+      await prefs.remove(_accountLockedUntilKey);
+      await prefs.remove(_sessionTokenKey);
+      await prefs.remove(_sessionExpiresKey);
+    } catch (e) {
+      debugPrint('Error clearing security data: $e');
     }
   }
 }
