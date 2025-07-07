@@ -7,12 +7,16 @@ import 'package:http_parser/http_parser.dart';
 
 import '../resources/constants/endpoints.dart';
 import '../utils/functions.dart';
+import 'api_service.dart';
 
 class ApiClient {
   var headers = {
     "Accept": "application/json",
     "Content-Type": "application/json",
   };
+
+  // Integration with the new comprehensive API service
+  final ApiService _apiService = ApiService();
 
   Future<(bool, String)> getRequest(
     String endpoint, {
