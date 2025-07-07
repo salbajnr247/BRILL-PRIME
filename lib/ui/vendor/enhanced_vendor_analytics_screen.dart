@@ -382,54 +382,113 @@ class _EnhancedVendorAnalyticsScreenState extends State<EnhancedVendorAnalyticsS
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Revenue Trend",
-            style: TextStyle(
-              fontFamily: FontConstants.montserratSemiBold,
-              fontSize: 16.sp,
-              color: AppColors.black,
-            ),
-          ),
-          SizedBox(height: 16.h),
-          // Simple chart representation
-          Container(
-            height: 150.h,
-            decoration: BoxDecoration(
-              color: AppColors.grey100,
-              borderRadius: BorderRadius.circular(8.r),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.show_chart,
-                    size: 48.sp,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Revenue Trend",
+                style: TextStyle(
+                  fontFamily: FontConstants.montserratSemiBold,
+                  fontSize: 16.sp,
+                  color: AppColors.black,
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+                child: Text(
+                  "Last ${revenueHistory.length} days",
+                  style: TextStyle(
+                    fontFamily: FontConstants.montserratMedium,
+                    fontSize: 10.sp,
                     color: AppColors.primary,
                   ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    "Revenue Chart",
-                    style: TextStyle(
-                      fontFamily: FontConstants.montserratMedium,
-                      fontSize: 14.sp,
-                      color: AppColors.grey600,
-                    ),
-                  ),
-                  Text(
-                    "${revenueHistory.length} data points",
-                    style: TextStyle(
-                      fontFamily: FontConstants.montserratRegular,
-                      fontSize: 12.sp,
-                      color: AppColors.grey600,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Container(
+            height: 150.h,
+            child: revenueHistory.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.show_chart,
+                          size: 48.sp,
+                          color: AppColors.grey400,
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          "No revenue data",
+                          style: TextStyle(
+                            fontFamily: FontConstants.montserratMedium,
+                            fontSize: 14.sp,
+                            color: AppColors.grey600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : _buildSimpleLineChart(revenueHistory),
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildChartLegendItem("Revenue", AppColors.primary),
+              _buildChartLegendItem("Target", AppColors.orange),
+              _buildChartLegendItem("Trend", AppColors.green),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSimpleLineChart(List<dynamic> data) {
+    final maxValue = data.isEmpty ? 0.0 : data.map((e) => e['value'] ?? 0.0).reduce((a, b) => a > b ? a : b);
+    
+    return Container(
+      padding: EdgeInsets.all(8.w),
+      child: CustomPaint(
+        size: Size(double.infinity, 134.h),
+        painter: SimpleLineChartPainter(
+          data: data.map((e) => (e['value'] ?? 0.0).toDouble()).toList(),
+          maxValue: maxValue,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChartLegendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12.w,
+          height: 12.h,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        SizedBox(width: 4.w),
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: FontConstants.montserratRegular,
+            fontSize: 10.sp,
+            color: AppColors.grey600,
+          ),
+        ),
+      ],
     );
   }
 
