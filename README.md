@@ -1,6 +1,6 @@
 # Brill Prime
 
-Brill Prime is an application designed for vendors to manage their sales, inventory, and business operations.
+A Flutter application for commodity trading and delivery services.
 
 ## Features
 
@@ -11,10 +11,20 @@ Brill Prime is an application designed for vendors to manage their sales, invent
 
 ## Getting Started
 
+This project is a Flutter application that runs on mobile devices (iOS, Android) and web browsers. Desktop platforms (macOS, Windows, Linux) will be added in future releases.
 
 ### Prerequisites
 
 - Flutter SDK: Ensure you have Flutter installed. You can follow the installation [guide here](https://flutter.dev/docs/get-started/install).
 - Dart SDK: Comes bundled with Flutter but ensure it is correctly configured.
+
+## Supported Platforms
+
+- ✅ iOS
+- ✅ Android  
+- ✅ Web
+- 🚧 macOS (Coming Soon)
+- 🚧 Windows (Coming Soon)
+- 🚧 Linux (Coming Soon)
 
 #BrillPrime

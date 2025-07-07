@@ -60,3 +60,36 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   mockito: ^5.4.4
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  # Target platforms: iOS, Android, Web only
+  platforms:
+    android:
+    ios:
+    web:
+
+  assets:
+    - assets/images/
+    - assets/fonts/
+
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Regular.ttf
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Montserrat-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Montserrat-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Montserrat-Black.ttf
+          weight: 900
+        - asset: assets/fonts/Montserrat-Thin.ttf
+          weight: 100
