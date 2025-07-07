@@ -32,3 +32,24 @@ args = "flutter pub get"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "flutter run --web-port 5000 --web-hostname 0.0.0.0"
+
+[[workflows.workflow]]
+name = "Run Cart Tests"
+author = 40669021
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter test test/providers/cart_provider_test.dart"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter test test/ui/cart/cart_screen_test.dart"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter test test/widgets/dialogs/guest_checkout_dialog_test.dart"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter test test/integration/cart_integration_test.dart"
