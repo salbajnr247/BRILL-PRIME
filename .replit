@@ -1,4 +1,4 @@
-modules = ["cpp-clang14", "c-clang14", "swift-5.8", "dart-2.18", "dart-3.5", "java-graalvm22.3", "nix", "swift-5.6", "web", "gcloud", "bash", "deno-2"]
+modules = ["cpp-clang14", "c-clang14", "swift-5.8", "dart-3.5"]
 run = "flutter run"
 
 [nix]
