@@ -78,6 +78,11 @@ dependencies:
   http_parser: ^4.0.2
 
   flutter_card_io: ^2.0.0
+  
+  # Security packages
+  crypto: ^3.0.3
+  device_info_plus: ^10.1.2
+  package_info_plus: ^8.0.2
 
 dev_dependencies:
   flutter_test:

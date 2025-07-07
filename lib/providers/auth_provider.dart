@@ -24,6 +24,7 @@ import '../resources/constants/string_constants.dart';
 import '../services/api_client.dart';
 import '../services/biometric_auth_service.dart';
 import '../services/social_auth_service.dart';
+import '../services/security_service.dart';
 import '../ui/confirm_email/confirm_email_screen.dart';
 import '../utils/functions.dart';
 import 'package:http/http.dart' as http;
@@ -34,6 +35,7 @@ import '../utils/navigation_util.dart';
 class AuthProvider extends ChangeNotifier {
   bool isError = true;
   final SocialAuthService _socialAuthService = SocialAuthService();
+  final SecurityService _securityService = SecurityService();
 
   String selectedAccountType = consumer;
   void updateAccountType(String accountType) {
@@ -308,6 +310,19 @@ class AuthProvider extends ChangeNotifier {
     hiveBiometricModel = null;
 
     bool isLoggedIn = false;
+    
+    // Check if account is locked
+    final isLocked = await _securityService.isAccountLocked();
+    if (isLocked) {
+      final remainingTime = await _securityService.getRemainingLockoutTime();
+      if (remainingTime != null) {
+        final minutes = remainingTime.inMinutes;
+        _resMessage = "Account locked. Try again in $minutes minutes.";
+        notifyListeners();
+        return false;
+      }
+    }
+    
     final connected = await connectionChecker();
 
     String url = loginEndpoint;
@@ -332,6 +347,12 @@ class AuthProvider extends ChangeNotifier {
           ///The user is logged in
           ///
           ///
+          // Record successful login
+          await _securityService.recordLoginAttempt(true);
+          
+          // Generate session token
+          await _securityService.generateSessionToken();
+          
           // Update Firebase token
           // updateFirebaseFCMToken(context: context);
           isLoggedIn = true;
@@ -377,6 +398,9 @@ class AuthProvider extends ChangeNotifier {
                 context: context, screen: const ConfirmEmailScreen());
           }
         } else {
+          // Record failed login attempt
+          await _securityService.recordLoginAttempt(false);
+          
           _resMessage = loginRequest.$2;
           _isLoading = false;
           notifyListeners();
@@ -492,19 +516,59 @@ class AuthProvider extends ChangeNotifier {
 
     BiometricAuthService biometricAuthService = BiometricAuthService();
     bool enabled = false;
-    bool isAuthenticated = await biometricAuthService.authenticate();
+    
+    // Check if biometric is available
+    final isAvailable = await biometricAuthService.isBiometricAvailable();
+    if (!isAvailable) {
+      _resMessage = "Biometric authentication is not available on this device";
+      notifyListeners();
+      return false;
+    }
+    
+    // Authenticate user before enabling
+    bool isAuthenticated = await biometricAuthService.authenticate(
+      customReason: "Authenticate to enable biometric login"
+    );
+    
     if (isAuthenticated) {
-      //   User authenticated using biometrics
-      //   Save credentials
-
-      if (hiveBiometricModel != null) {
+      // Enable biometric in service
+      enabled = await biometricAuthService.enableBiometric();
+      
+      if (enabled && hiveBiometricModel != null) {
         Hive.box<HiveBiometricModel>(biometricBox)
             .put(hiveBiometricModel?.email, hiveBiometricModel!);
-        enabled = true;
       }
     }
 
     return enabled;
+  }
+
+  Future<bool> disableBiometricAuthentication() async {
+    BiometricAuthService biometricAuthService = BiometricAuthService();
+    
+    // Authenticate before disabling
+    bool isAuthenticated = await biometricAuthService.authenticate(
+      customReason: "Authenticate to disable biometric login"
+    );
+    
+    if (isAuthenticated) {
+      final disabled = await biometricAuthService.disableBiometric();
+      if (disabled) {
+        // Clear stored biometric credentials
+        final box = Hive.box<HiveBiometricModel>(biometricBox);
+        await box.clear();
+        biometricModel = null;
+        notifyListeners();
+      }
+      return disabled;
+    }
+    
+    return false;
+  }
+
+  Future<Map<String, dynamic>> getBiometricStatus() async {
+    BiometricAuthService biometricAuthService = BiometricAuthService();
+    return await biometricAuthService.getBiometricStatus();
   }
 
   // Google Sign In
@@ -709,7 +773,7 @@ class AuthProvider extends ChangeNotifier {
         "social_id": socialId,
         "role": selectedAccountType.toUpperCase(),
         "phone": "", // Can be updated later
-        "photo_url": photoUrl,
+        "photo_url": photoUrl ?? "",
       };
 
       debugPrint("Social registration payload: $body");
