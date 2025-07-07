@@ -1,13 +1,16 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../resources/constants/color_constants.dart';
 import '../../resources/constants/dimension_constants.dart';
-import '../widgets/custom_appbar.dart';
-import '../widgets/custom_text.dart';
-import '../widgets/cached_network_image_widget.dart';
+import '../../resources/constants/font_constants.dart';
+import '../../widgets/custom_appbar.dart';
+import '../../widgets/custom_text.dart';
+import '../../widgets/components.dart';
+import '../../widgets/cached_network_image_widget.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({Key? key}) : super(key: key);
@@ -26,38 +29,17 @@ class CartScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (cartProvider.items.isEmpty) {
-            return _buildEmptyCart(context);
+          if (cartProvider.items.isEmpty && cartProvider.savedItems.isEmpty) {
+            return _buildEmptyCart();
           }
 
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  padding: EdgeInsets.all(DimensionConstants.d16.w),
-                  itemCount: cartProvider.itemsByVendor.length,
-                  itemBuilder: (context, index) {
-                    final vendorId = cartProvider.itemsByVendor.keys.elementAt(index);
-                    final vendorItems = cartProvider.itemsByVendor[vendorId]!;
-                    
-                    return _buildVendorSection(
-                      context,
-                      vendorItems.first.vendorName,
-                      vendorItems,
-                      cartProvider,
-                    );
-                  },
-                ),
-              ),
-              _buildBottomSection(context, cartProvider),
-            ],
-          );
+          return _buildCartContent(cartProvider);
         },
       ),
     );
   }
 
-  Widget _buildEmptyCart(BuildContext context) {
+  Widget _buildEmptyCart() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -65,199 +47,378 @@ class CartScreen extends StatelessWidget {
           Icon(
             Icons.shopping_cart_outlined,
             size: 80.w,
-            color: Colors.grey[400],
+            color: AppColors.greyColor,
           ),
-          SizedBox(height: DimensionConstants.d16.h),
+          SizedBox(height: AppDimensions.paddingMedium),
           CustomText(
-            'Your cart is empty',
-            fontSize: 18.sp,
+            text: 'Your cart is empty',
+            fontSize: AppFontSize.s18,
             fontWeight: FontWeight.w600,
+            color: AppColors.greyColor,
           ),
-          SizedBox(height: DimensionConstants.d8.h),
+          SizedBox(height: AppDimensions.paddingSmall),
           CustomText(
-            'Add items to get started',
-            fontSize: 14.sp,
-            color: Colors.grey[600],
-          ),
-          SizedBox(height: DimensionConstants.d24.h),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ColorConstants.primaryColor,
-              padding: EdgeInsets.symmetric(
-                horizontal: DimensionConstants.d32.w,
-                vertical: DimensionConstants.d12.h,
-              ),
-            ),
-            child: CustomText(
-              'Continue Shopping',
-              color: Colors.white,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-            ),
+            text: 'Add items to get started',
+            fontSize: AppFontSize.s14,
+            color: AppColors.greyColor,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildVendorSection(
-    BuildContext context,
-    String vendorName,
-    List<dynamic> items,
-    CartProvider cartProvider,
-  ) {
-    return Container(
-      margin: EdgeInsets.only(bottom: DimensionConstants.d16.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(DimensionConstants.d12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+  Widget _buildCartContent(CartProvider cartProvider) {
+    return DefaultTabController(
+      length: 2,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: EdgeInsets.all(DimensionConstants.d16.w),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.store,
-                  size: 20.w,
-                  color: ColorConstants.primaryColor,
-                ),
-                SizedBox(width: DimensionConstants.d8.w),
-                Expanded(
-                  child: CustomText(
-                    vendorName,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => cartProvider.clearVendorItems(items.first.vendorId),
-                  child: CustomText(
-                    'Clear All',
-                    color: Colors.red,
-                    fontSize: 12.sp,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          ...items.map((item) => _buildCartItem(context, item, cartProvider)).toList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCartItem(BuildContext context, dynamic item, CartProvider cartProvider) {
-    return Padding(
-      padding: EdgeInsets.all(DimensionConstants.d16.w),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(DimensionConstants.d8.r),
-            child: CachedNetworkImageWidget(
-              imageUrl: item.image,
-              height: 60.h,
-              width: 60.w,
-              fit: BoxFit.cover,
-            ),
-          ),
-          SizedBox(width: DimensionConstants.d12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CustomText(
-                  item.name,
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w500,
-                  maxLines: 2,
-                ),
-                SizedBox(height: DimensionConstants.d4.h),
-                CustomText(
-                  '₦${item.price.toStringAsFixed(2)}',
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: ColorConstants.primaryColor,
-                ),
-              ],
-            ),
-          ),
-          Column(
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => cartProvider.decreaseQuantity(item.commodityId),
-                    icon: Container(
-                      padding: EdgeInsets.all(4.w),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
-                      child: Icon(Icons.remove, size: 16.w),
-                    ),
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: DimensionConstants.d12.w),
-                    child: CustomText(
-                      '${item.quantity}',
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => cartProvider.increaseQuantity(item.commodityId),
-                    icon: Container(
-                      padding: EdgeInsets.all(4.w),
-                      decoration: BoxDecoration(
-                        color: ColorConstants.primaryColor,
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
-                      child: Icon(Icons.add, size: 16.w, color: Colors.white),
-                    ),
-                  ),
-                ],
+          TabBar(
+            tabs: [
+              Tab(
+                text: 'Cart (${cartProvider.items.length})',
               ),
-              TextButton(
-                onPressed: () => cartProvider.saveForLater(item.commodityId),
-                child: CustomText(
-                  'Save for later',
-                  fontSize: 12.sp,
-                  color: ColorConstants.primaryColor,
-                ),
+              Tab(
+                text: 'Saved (${cartProvider.savedItems.length})',
               ),
             ],
+            labelColor: AppColors.primaryColor,
+            unselectedLabelColor: AppColors.greyColor,
+            indicatorColor: AppColors.primaryColor,
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildCartTab(cartProvider),
+                _buildSavedTab(cartProvider),
+              ],
+            ),
+          ),
+          if (cartProvider.items.isNotEmpty) _buildCartSummary(cartProvider),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCartTab(CartProvider cartProvider) {
+    if (cartProvider.items.isEmpty) {
+      return _buildEmptyCartTab();
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(AppDimensions.paddingMedium),
+      itemCount: cartProvider.items.length,
+      itemBuilder: (context, index) {
+        final item = cartProvider.items[index];
+        return _buildCartItem(item, cartProvider);
+      },
+    );
+  }
+
+  Widget _buildSavedTab(CartProvider cartProvider) {
+    if (cartProvider.savedItems.isEmpty) {
+      return _buildEmptySavedTab();
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(AppDimensions.paddingMedium),
+      itemCount: cartProvider.savedItems.length,
+      itemBuilder: (context, index) {
+        final item = cartProvider.savedItems[index];
+        return _buildSavedItem(item, cartProvider);
+      },
+    );
+  }
+
+  Widget _buildEmptyCartTab() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.shopping_cart_outlined,
+            size: 80.w,
+            color: AppColors.greyColor,
+          ),
+          SizedBox(height: AppDimensions.paddingMedium),
+          CustomText(
+            text: 'Your cart is empty',
+            fontSize: AppFontSize.s18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.greyColor,
+          ),
+          SizedBox(height: AppDimensions.paddingSmall),
+          CustomText(
+            text: 'Add items to get started',
+            fontSize: AppFontSize.s14,
+            color: AppColors.greyColor,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBottomSection(BuildContext context, CartProvider cartProvider) {
-    return Container(
-      padding: EdgeInsets.all(DimensionConstants.d16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, -2),
+  Widget _buildEmptySavedTab() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.bookmark_outline,
+            size: 80.w,
+            color: AppColors.greyColor,
+          ),
+          SizedBox(height: AppDimensions.paddingMedium),
+          CustomText(
+            text: 'No saved items',
+            fontSize: AppFontSize.s18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.greyColor,
+          ),
+          SizedBox(height: AppDimensions.paddingSmall),
+          CustomText(
+            text: 'Items you save for later will appear here',
+            fontSize: AppFontSize.s14,
+            color: AppColors.greyColor,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCartItem(CartItem item, CartProvider cartProvider) {
+    return Card(
+      margin: EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+      child: Padding(
+        padding: EdgeInsets.all(AppDimensions.paddingMedium),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8.r),
+                  child: CachedNetworkImageWidget(
+                    imageUrl: item.image,
+                    width: 80.w,
+                    height: 80.w,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                SizedBox(width: AppDimensions.paddingMedium),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomText(
+                        text: item.name,
+                        fontSize: AppFontSize.s16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      SizedBox(height: AppDimensions.paddingSmall),
+                      CustomText(
+                        text: 'Vendor: ${item.vendorName}',
+                        fontSize: AppFontSize.s14,
+                        color: AppColors.greyColor,
+                      ),
+                      SizedBox(height: AppDimensions.paddingSmall),
+                      CustomText(
+                        text: '₦${item.price.toStringAsFixed(2)}',
+                        fontSize: AppFontSize.s16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryColor,
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  children: [
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => cartProvider.decreaseQuantity(item.commodityId),
+                          child: Container(
+                            width: 32.w,
+                            height: 32.w,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: AppColors.greyColor),
+                              borderRadius: BorderRadius.circular(4.r),
+                            ),
+                            child: Icon(
+                              Icons.remove,
+                              size: 20.w,
+                              color: AppColors.greyColor,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: AppDimensions.paddingSmall),
+                        CustomText(
+                          text: '${item.quantity}',
+                          fontSize: AppFontSize.s16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        SizedBox(width: AppDimensions.paddingSmall),
+                        GestureDetector(
+                          onTap: () => cartProvider.increaseQuantity(item.commodityId),
+                          child: Container(
+                            width: 32.w,
+                            height: 32.w,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryColor,
+                              borderRadius: BorderRadius.circular(4.r),
+                            ),
+                            child: Icon(
+                              Icons.add,
+                              size: 20.w,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: AppDimensions.paddingSmall),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                CustomText(
+                  text: 'Total: ₦${item.totalPrice.toStringAsFixed(2)}',
+                  fontSize: AppFontSize.s16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryColor,
+                ),
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => cartProvider.saveForLater(item.commodityId),
+                      icon: Icon(Icons.bookmark_outline, size: 16.w),
+                      label: Text('Save for later'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primaryColor,
+                        textStyle: TextStyle(fontSize: AppFontSize.s12),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => cartProvider.removeItem(item.commodityId),
+                      icon: Icon(Icons.delete_outline, size: 16.w),
+                      label: Text('Remove'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        textStyle: TextStyle(fontSize: AppFontSize.s12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSavedItem(CartItem item, CartProvider cartProvider) {
+    return Card(
+      margin: EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+      child: Padding(
+        padding: EdgeInsets.all(AppDimensions.paddingMedium),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8.r),
+                  child: CachedNetworkImageWidget(
+                    imageUrl: item.image,
+                    width: 80.w,
+                    height: 80.w,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                SizedBox(width: AppDimensions.paddingMedium),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomText(
+                        text: item.name,
+                        fontSize: AppFontSize.s16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      SizedBox(height: AppDimensions.paddingSmall),
+                      CustomText(
+                        text: 'Vendor: ${item.vendorName}',
+                        fontSize: AppFontSize.s14,
+                        color: AppColors.greyColor,
+                      ),
+                      SizedBox(height: AppDimensions.paddingSmall),
+                      CustomText(
+                        text: '₦${item.price.toStringAsFixed(2)}',
+                        fontSize: AppFontSize.s16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryColor,
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.bookmark,
+                  color: AppColors.primaryColor,
+                  size: 24.w,
+                ),
+              ],
+            ),
+            SizedBox(height: AppDimensions.paddingSmall),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                CustomText(
+                  text: 'Saved ${item.quantity} item(s)',
+                  fontSize: AppFontSize.s14,
+                  color: AppColors.greyColor,
+                ),
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => cartProvider.moveToCart(item.commodityId),
+                      icon: Icon(Icons.shopping_cart_outlined, size: 16.w),
+                      label: Text('Move to Cart'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primaryColor,
+                        textStyle: TextStyle(fontSize: AppFontSize.s12),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => cartProvider.removeSavedItem(item.commodityId),
+                      icon: Icon(Icons.delete_outline, size: 16.w),
+                      label: Text('Remove'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        textStyle: TextStyle(fontSize: AppFontSize.s12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCartSummary(CartProvider cartProvider) {
+    return Container(
+      padding: EdgeInsets.all(AppDimensions.paddingMedium),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: AppColors.greyColor.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
       ),
       child: Column(
         children: [
@@ -265,43 +426,90 @@ class CartScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               CustomText(
-                'Total (${cartProvider.itemCount} items)',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w500,
+                text: 'Total (${cartProvider.itemCount} items)',
+                fontSize: AppFontSize.s16,
+                fontWeight: FontWeight.w600,
               ),
               CustomText(
-                '₦${cartProvider.totalAmount.toStringAsFixed(2)}',
-                fontSize: 20.sp,
+                text: '₦${cartProvider.totalAmount.toStringAsFixed(2)}',
+                fontSize: AppFontSize.s18,
                 fontWeight: FontWeight.w700,
-                color: ColorConstants.primaryColor,
+                color: AppColors.primaryColor,
               ),
             ],
           ),
-          SizedBox(height: DimensionConstants.d16.h),
+          if (cartProvider.vendorCount > 1) ...[
+            SizedBox(height: AppDimensions.paddingSmall),
+            CustomText(
+              text: 'Items from ${cartProvider.vendorCount} vendors',
+              fontSize: AppFontSize.s12,
+              color: AppColors.greyColor,
+            ),
+          ],
+          SizedBox(height: AppDimensions.paddingMedium),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                // Navigate to checkout
-                // Navigator.pushNamed(context, '/checkout');
+                _handleCheckout(context);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: ColorConstants.primaryColor,
-                padding: EdgeInsets.symmetric(vertical: DimensionConstants.d16.h),
+                backgroundColor: AppColors.primaryColor,
+                padding: EdgeInsets.symmetric(vertical: 16.h),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(DimensionConstants.d8.r),
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
               ),
               child: CustomText(
-                'Proceed to Checkout',
-                color: Colors.white,
-                fontSize: 16.sp,
+                text: 'Proceed to Checkout',
+                fontSize: AppFontSize.s16,
                 fontWeight: FontWeight.w600,
+                color: Colors.white,
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  void _handleCheckout(BuildContext context) {
+    final authProvider = context.read<AuthProvider>();
+
+    if (authProvider.isLoggedIn) {
+      // User is logged in, proceed to checkout
+      Navigator.pushNamed(context, '/checkout');
+    } else {
+      // Show guest checkout dialog
+      showDialog(
+        context: context,
+        builder: (context) => const GuestCheckoutDialog(),
+      );
+    }
+  }
+}
+
+class GuestCheckoutDialog extends StatelessWidget {
+  const GuestCheckoutDialog({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Guest Checkout'),
+      content: const Text('Continue as a guest?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+            Navigator.pushNamed(context, '/checkout');
+          },
+          child: const Text('Continue as Guest'),
+        ),
+      ],
     );
   }
 }

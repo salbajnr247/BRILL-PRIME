@@ -78,6 +78,11 @@ dependencies:
   http_parser: ^4.0.2
 
   flutter_card_io: ^2.0.0
+  
+  # Security packages
+  crypto: ^3.0.3
+  device_info_plus: ^10.1.2
+  package_info_plus: ^8.0.2
 
 dev_dependencies:
   flutter_test:
@@ -88,6 +93,9 @@ dev_dependencies:
 
   hive_generator: ^2.0.1
   build_runner: ^2.4.13
+  mockito: ^5.4.4
+  integration_test:
+    sdk: flutter
 
 flutter_launcher_icons:
   android: "launcher_icon"
