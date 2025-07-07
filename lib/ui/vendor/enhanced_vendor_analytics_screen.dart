@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +7,8 @@ import 'package:brill_prime/resources/constants/font_constants.dart';
 import 'package:brill_prime/ui/widgets/custom_appbar.dart';
 import 'package:brill_prime/ui/widgets/loading_indicator.dart';
 import 'package:brill_prime/ui/widgets/components.dart';
+import '../../providers/real_time_provider.dart';
+import '../../widgets/real_time_status_widget.dart';
 
 class EnhancedVendorAnalyticsScreen extends StatefulWidget {
   const EnhancedVendorAnalyticsScreen({super.key});
@@ -20,7 +21,7 @@ class _EnhancedVendorAnalyticsScreenState extends State<EnhancedVendorAnalyticsS
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _selectedPeriod = '30days';
-  
+
   final List<String> _periods = ['7days', '30days', '90days', '365days'];
   final Map<String, String> _periodLabels = {
     '7days': 'Last 7 Days',
@@ -34,8 +35,14 @@ class _EnhancedVendorAnalyticsScreenState extends State<EnhancedVendorAnalyticsS
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<VendorProvider>();
-      provider.getVendorAnalytics(context: context, period: _selectedPeriod);
+      final vendorProvider = Provider.of<VendorProvider>(context, listen: false);
+      final realTimeProvider = Provider.of<RealTimeProvider>(context, listen: false);
+
+      vendorProvider.getVendorAnalytics(context: context, period: _selectedPeriod);
+
+      // Connect to real-time analytics updates
+      realTimeProvider.connect();
+      realTimeProvider.subscribeToAnalytics("vendor_id"); // Replace with actual vendor ID
     });
   }
 
@@ -63,13 +70,13 @@ class _EnhancedVendorAnalyticsScreenState extends State<EnhancedVendorAnalyticsS
             children: [
               // Period Selector
               _buildPeriodSelector(vendorProvider),
-              
+
               // Key Metrics Overview
               _buildKeyMetrics(vendorProvider),
-              
+
               // Tab Navigation
               _buildTabNavigation(),
-              
+
               // Tab Content
               Expanded(
                 child: TabBarView(

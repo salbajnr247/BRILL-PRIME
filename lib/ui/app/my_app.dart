@@ -2,7 +2,21 @@
 import 'package:flutter/material.dart';
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/auth_provider.dart';
+import '../../providers/bottom_nav_provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../providers/dashboard_provider.dart';
+import '../../providers/favourites_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../providers/order_management_provider.dart';
+import '../../providers/payment_methods_provider.dart';
+import '../../providers/review_provider.dart';
+import '../../providers/search_provider.dart';
+import '../../providers/toll_gate_provider.dart';
+import '../../providers/vendor_provider.dart';
+import '../../providers/real_time_provider.dart';
 import '../../resources/routes_manager.dart';
 import '../../resources/theme_manager.dart';
 import '../splash_screen/splash_screen.dart';
@@ -189,12 +203,30 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
         useInheritedMediaQuery: true,
         minTextAdapt: true,
         splitScreenMode: true,
-        builder: (_, child) => MaterialApp(
-              debugShowCheckedModeBanner: false,
-              onGenerateRoute: RouteGenerator.getRoute,
-              initialRoute: Routes.splashRoute,
-              home: const SplashScreen(),
-              theme: getApplicationTheme(),
+        builder: (_, child) => MultiProvider(
+              providers: [
+                ChangeNotifierProvider(create: (_) => AuthProvider()),
+                ChangeNotifierProvider(create: (_) => BottomNavProvider()),
+                ChangeNotifierProvider(create: (_) => DashboardProvider()),
+                ChangeNotifierProvider(create: (_) => FavouritesProvider()),
+                ChangeNotifierProvider(create: (_) => NotificationProvider()),
+                ChangeNotifierProvider(create: (_) => CartProvider()),
+                ChangeNotifierProvider(create: (_) => SearchProvider()),
+                ChangeNotifierProvider(create: (_) => ReviewProvider()),
+                ChangeNotifierProvider(create: (_) => TollGateProvider()),
+                ChangeNotifierProvider(
+                    create: (_) => OrderManagementProvider()),
+                ChangeNotifierProvider(create: (_) => PaymentMethodsProvider()),
+                ChangeNotifierProvider(create: (_) => VendorProvider()),
+                ChangeNotifierProvider(create: (_) => RealTimeProvider()),
+              ],
+              child: MaterialApp(
+                debugShowCheckedModeBanner: false,
+                onGenerateRoute: RouteGenerator.getRoute,
+                initialRoute: Routes.splashRoute,
+                home: const SplashScreen(),
+                theme: getApplicationTheme(),
+              ),
             ));
   }
 }

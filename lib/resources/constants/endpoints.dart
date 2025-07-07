@@ -3,6 +3,7 @@
 /// Staging URL
 library;
 const basedURL = "https://brillprime-dev.onrender.com"; // digital ocean
+const String wsBaseURL = "wss://brillprime-dev.onrender.com";
 
 
 const supaBaseURL = "https://xvvinilnmimavowaabvv.supabase.co/"; //URL for uploading images
