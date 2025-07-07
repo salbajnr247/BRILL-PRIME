@@ -1,254 +1,199 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/real_time_provider.dart';
+import '../providers/notification_provider.dart';
+import '../services/real_time_service.dart';
 import '../models/notification_model.dart';
 import '../resources/constants/color_constants.dart';
+import '../resources/constants/styles_manager.dart';
 
-class RealTimeNotificationWidget extends StatelessWidget {
-  const RealTimeNotificationWidget({Key? key}) : super(key: key);
+class RealTimeNotificationWidget extends StatefulWidget {
+  final String userId;
+  final Function(NotificationModel)? onNotificationTap;
+
+  const RealTimeNotificationWidget({
+    Key? key,
+    required this.userId,
+    this.onNotificationTap,
+  }) : super(key: key);
+
+  @override
+  State<RealTimeNotificationWidget> createState() => _RealTimeNotificationWidgetState();
+}
+
+class _RealTimeNotificationWidgetState extends State<RealTimeNotificationWidget>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  NotificationModel? _lastNotification;
+  bool _isVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupAnimations();
+    _setupRealTimeListener();
+  }
+
+  void _setupAnimations() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
+  }
+
+  void _setupRealTimeListener() {
+    final realTimeService = RealTimeService();
+    realTimeService.subscribeToNotifications(widget.userId);
+
+    realTimeService.notifications.listen((notification) {
+      final notificationModel = NotificationModel.fromJson(notification);
+      _showNotification(notificationModel);
+
+      // Add to provider
+      context.read<NotificationProvider>().addNotification(notificationModel);
+    });
+  }
+
+  void _showNotification(NotificationModel notification) {
+    if (mounted) {
+      setState(() {
+        _lastNotification = notification;
+        _isVisible = true;
+      });
+
+      _animationController.forward();
+
+      // Auto-hide after 5 seconds
+      Future.delayed(const Duration(seconds: 5), () {
+        _hideNotification();
+      });
+    }
+  }
+
+  void _hideNotification() {
+    if (mounted) {
+      _animationController.reverse().then((_) {
+        if (mounted) {
+          setState(() {
+            _isVisible = false;
+            _lastNotification = null;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<RealTimeProvider>(
-      builder: (context, realTimeProvider, child) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Live Notifications',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: realTimeProvider.isConnected 
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.circle,
-                            size: 8,
-                            color: realTimeProvider.isConnected 
-                                ? Colors.green
-                                : Colors.red,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            realTimeProvider.isConnected ? 'Live' : 'Offline',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: realTimeProvider.isConnected 
-                                  ? Colors.green
-                                  : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (realTimeProvider.notifications.isNotEmpty)
-                      IconButton(
-                        onPressed: () => realTimeProvider.clearNotifications(),
-                        icon: const Icon(Icons.clear_all),
-                        tooltip: 'Clear all notifications',
-                      ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (realTimeProvider.notifications.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text(
-                    'No new notifications',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: realTimeProvider.notifications.length,
-                itemBuilder: (context, index) {
-                  final notification = realTimeProvider.notifications[index];
-                  return _buildNotificationItem(context, notification, realTimeProvider);
-                },
-              ),
-          ],
-        );
-      },
-    );
-  }
+    if (!_isVisible || _lastNotification == null) {
+      return const SizedBox.shrink();
+    }
 
-  Widget _buildNotificationItem(
-    BuildContext context,
-    NotificationModel notification,
-    RealTimeProvider realTimeProvider,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: notification.isRead == true 
-              ? Colors.grey.withOpacity(0.2)
-              : ColorConstants.primaryColor.withOpacity(0.3),
-          width: notification.isRead == true ? 1 : 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: _getNotificationColor(notification.type).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(
-              _getNotificationIcon(notification.type),
-              color: _getNotificationColor(notification.type),
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  notification.title ?? 'Notification',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: notification.isRead == true 
-                        ? FontWeight.normal
-                        : FontWeight.w600,
-                  ),
-                ),
-                if (notification.body != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    notification.body!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 10,
+      left: 16,
+      right: 16,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Material(
+            elevation: 8,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: mainColor, width: 1),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: mainColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    child: Icon(
+                      _getNotificationIcon(_lastNotification!.type),
+                      color: mainColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _lastNotification!.title,
+                          style: getBoldStyle(textColor: mainColor, fontSize: 14),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _lastNotification!.body,
+                          style: getRegularStyle(textColor: lightTextColor, fontSize: 12),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _hideNotification,
+                    icon: const Icon(Icons.close, size: 20),
+                    color: lightTextColor,
                   ),
                 ],
-                const SizedBox(height: 4),
-                Text(
-                  _formatTimestamp(notification.createdAt),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[500],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          Column(
-            children: [
-              if (notification.isRead != true)
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: ColorConstants.primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              const SizedBox(height: 8),
-              IconButton(
-                onPressed: () => realTimeProvider.markNotificationAsRead(notification.id!),
-                icon: Icon(
-                  notification.isRead == true ? Icons.mark_email_read : Icons.mark_email_unread,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  IconData _getNotificationIcon(String? type) {
-    switch (type?.toLowerCase()) {
+  IconData _getNotificationIcon(String type) {
+    switch (type.toLowerCase()) {
       case 'order':
-        return Icons.shopping_cart;
+        return Icons.shopping_bag;
       case 'payment':
         return Icons.payment;
-      case 'inventory':
-        return Icons.inventory;
-      case 'chat':
-        return Icons.chat;
-      case 'system':
-        return Icons.settings;
+      case 'delivery':
+        return Icons.local_shipping;
+      case 'promotion':
+        return Icons.local_offer;
       default:
         return Icons.notifications;
-    }
-  }
-
-  Color _getNotificationColor(String? type) {
-    switch (type?.toLowerCase()) {
-      case 'order':
-        return Colors.blue;
-      case 'payment':
-        return Colors.green;
-      case 'inventory':
-        return Colors.orange;
-      case 'chat':
-        return Colors.purple;
-      case 'system':
-        return Colors.grey;
-      default:
-        return ColorConstants.primaryColor;
-    }
-  }
-
-  String _formatTimestamp(DateTime? timestamp) {
-    if (timestamp == null) return '';
-    
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-    
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inHours < 1) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inDays < 1) {
-      return '${difference.inHours}h ago';
-    } else {
-      return '${difference.inDays}d ago';
     }
   }
 }

@@ -1,245 +1,272 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/real_time_provider.dart';
-import '../models/vendor_order_model.dart';
+import '../services/real_time_service.dart';
+import '../providers/order_management_provider.dart';
+import '../models/consumer_order_model.dart';
 import '../resources/constants/color_constants.dart';
+import '../resources/constants/styles_manager.dart';
+import '../ui/consumer/toll_gates/consumer_order_detail.dart';
 
-class RealTimeOrderCard extends StatelessWidget {
-  final VendorOrderModel order;
-  final VoidCallback? onTap;
-
+class RealTimeOrderCard extends StatefulWidget {
+  final ConsumerOrderData order;
+  final VoidCallback? onStatusChanged;
+  
   const RealTimeOrderCard({
     Key? key,
     required this.order,
-    this.onTap,
+    this.onStatusChanged,
   }) : super(key: key);
 
   @override
+  State<RealTimeOrderCard> createState() => _RealTimeOrderCardState();
+}
+
+class _RealTimeOrderCardState extends State<RealTimeOrderCard>
+    with TickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late AnimationController _statusController;
+  late Animation<double> _pulseAnimation;
+  late Animation<Color?> _statusColorAnimation;
+  
+  ConsumerOrderData? _currentOrder;
+  String _previousStatus = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _currentOrder = widget.order;
+    _previousStatus = widget.order.status;
+    _setupAnimations();
+    _setupRealTimeListener();
+  }
+
+  void _setupAnimations() {
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    
+    _statusController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _statusColorAnimation = ColorTween(
+      begin: _getStatusColor(_previousStatus),
+      end: _getStatusColor(_currentOrder?.status ?? ''),
+    ).animate(CurvedAnimation(
+      parent: _statusController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  void _setupRealTimeListener() {
+    final realTimeService = RealTimeService();
+    realTimeService.orderUpdates.listen((orderUpdate) {
+      if (orderUpdate['orderId'] == _currentOrder?.id.toString()) {
+        _updateOrderStatus(orderUpdate);
+      }
+    });
+  }
+
+  void _updateOrderStatus(Map<String, dynamic> orderUpdate) {
+    if (mounted) {
+      setState(() {
+        _previousStatus = _currentOrder?.status ?? '';
+        _currentOrder = _currentOrder?.copyWith(
+          status: orderUpdate['status'] ?? _currentOrder?.status,
+        );
+      });
+      
+      // Animate status change
+      _statusColorAnimation = ColorTween(
+        begin: _getStatusColor(_previousStatus),
+        end: _getStatusColor(_currentOrder?.status ?? ''),
+      ).animate(CurvedAnimation(
+        parent: _statusController,
+        curve: Curves.easeInOut,
+      ));
+      
+      _statusController.forward().then((_) {
+        _statusController.reset();
+      });
+      
+      // Pulse animation for attention
+      _pulseController.forward().then((_) {
+        _pulseController.reverse();
+      });
+      
+      widget.onStatusChanged?.call();
+      
+      // Update provider
+      context.read<OrderManagementProvider>().fetchAllOrders(context: context);
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Colors.orange;
+      case 'confirmed':
+        return Colors.blue;
+      case 'preparing':
+        return Colors.purple;
+      case 'ready':
+        return Colors.green;
+      case 'delivered':
+        return Colors.teal;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'Pending Confirmation';
+      case 'confirmed':
+        return 'Order Confirmed';
+      case 'preparing':
+        return 'Being Prepared';
+      case 'ready':
+        return 'Ready for Pickup';
+      case 'delivered':
+        return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status.toUpperCase();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _statusController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Consumer<RealTimeProvider>(
-      builder: (context, realTimeProvider, child) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-            border: _getOrderStatusBorder(),
-          ),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Order #${order.id}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+    if (_currentOrder == null) return const SizedBox.shrink();
+
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _pulseAnimation.value,
+          child: Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ConsumerOrderDetail(
+                      orderId: _currentOrder!.id.toString(),
+                    ),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Order #${_currentOrder!.id}',
+                          style: getBoldStyle(textColor: mainColor, fontSize: 16),
                         ),
-                      ),
+                        AnimatedBuilder(
+                          animation: _statusColorAnimation,
+                          builder: (context, child) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (_statusColorAnimation.value ?? _getStatusColor(_currentOrder!.status))
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: _statusColorAnimation.value ?? _getStatusColor(_currentOrder!.status),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                _getStatusText(_currentOrder!.status),
+                                style: getBoldStyle(
+                                  textColor: _statusColorAnimation.value ?? _getStatusColor(_currentOrder!.status),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Total: ₦${_currentOrder!.totalPrice}',
+                      style: getRegularStyle(textColor: lightTextColor, fontSize: 14),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Order Date: ${_currentOrder!.createdAt.toString().split(' ')[0]}',
+                      style: getRegularStyle(textColor: lightTextColor, fontSize: 12),
+                    ),
+                    if (_currentOrder!.status.toLowerCase() == 'preparing') ...[
+                      const SizedBox(height: 12),
                       Row(
                         children: [
-                          _buildStatusChip(),
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                _getStatusColor(_currentOrder!.status),
+                              ),
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          if (realTimeProvider.isConnected)
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: Colors.green,
-                                shape: BoxShape.circle,
-                              ),
+                          Text(
+                            'Your order is being prepared...',
+                            style: getRegularStyle(
+                              textColor: _getStatusColor(_currentOrder!.status),
+                              fontSize: 12,
                             ),
+                          ),
                         ],
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Customer: ${order.customerName ?? "N/A"}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total: \$${order.total?.toStringAsFixed(2) ?? "0.00"}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: ColorConstants.primaryColor,
-                        ),
-                      ),
-                      Text(
-                        _formatTime(order.createdAt),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_shouldShowActions())
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Row(
-                        children: [
-                          if (order.status == 'pending')
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () => _acceptOrder(context),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: const Text('Accept'),
-                              ),
-                            ),
-                          if (order.status == 'pending')
-                            const SizedBox(width: 8),
-                          if (order.status == 'pending')
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => _rejectOrder(context),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.red,
-                                  side: const BorderSide(color: Colors.red),
-                                ),
-                                child: const Text('Reject'),
-                              ),
-                            ),
-                          if (order.status == 'accepted')
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () => _markAsReady(context),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: ColorConstants.primaryColor,
-                                ),
-                                child: const Text('Mark Ready'),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         );
       },
     );
-  }
-
-  Widget _buildStatusChip() {
-    Color backgroundColor;
-    Color textColor;
-    
-    switch (order.status?.toLowerCase()) {
-      case 'pending':
-        backgroundColor = Colors.orange.withOpacity(0.1);
-        textColor = Colors.orange;
-        break;
-      case 'accepted':
-        backgroundColor = Colors.blue.withOpacity(0.1);
-        textColor = Colors.blue;
-        break;
-      case 'ready':
-        backgroundColor = Colors.green.withOpacity(0.1);
-        textColor = Colors.green;
-        break;
-      case 'completed':
-        backgroundColor = Colors.purple.withOpacity(0.1);
-        textColor = Colors.purple;
-        break;
-      case 'cancelled':
-        backgroundColor = Colors.red.withOpacity(0.1);
-        textColor = Colors.red;
-        break;
-      default:
-        backgroundColor = Colors.grey.withOpacity(0.1);
-        textColor = Colors.grey;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        order.status?.toUpperCase() ?? 'UNKNOWN',
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Border? _getOrderStatusBorder() {
-    switch (order.status?.toLowerCase()) {
-      case 'pending':
-        return Border.all(color: Colors.orange.withOpacity(0.3), width: 2);
-      case 'accepted':
-        return Border.all(color: Colors.blue.withOpacity(0.3), width: 2);
-      default:
-        return null;
-    }
-  }
-
-  bool _shouldShowActions() {
-    return order.status == 'pending' || order.status == 'accepted';
-  }
-
-  void _acceptOrder(BuildContext context) {
-    final realTimeProvider = Provider.of<RealTimeProvider>(context, listen: false);
-    realTimeProvider.updateOrderStatus(order.id!, 'accepted');
-  }
-
-  void _rejectOrder(BuildContext context) {
-    final realTimeProvider = Provider.of<RealTimeProvider>(context, listen: false);
-    realTimeProvider.updateOrderStatus(order.id!, 'cancelled');
-  }
-
-  void _markAsReady(BuildContext context) {
-    final realTimeProvider = Provider.of<RealTimeProvider>(context, listen: false);
-    realTimeProvider.updateOrderStatus(order.id!, 'ready');
-  }
-
-  String _formatTime(DateTime? dateTime) {
-    if (dateTime == null) return '';
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-    
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inHours < 1) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inDays < 1) {
-      return '${difference.inHours}h ago';
-    } else {
-      return '${difference.inDays}d ago';
-    }
   }
 }
