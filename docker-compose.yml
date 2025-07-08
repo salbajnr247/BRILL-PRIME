@@ -1,0 +1,6 @@
+services:
+  brillprime:
+    image: brillprime
+    build:
+      context: .
+      dockerfile: ./Dockerfile
